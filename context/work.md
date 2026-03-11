@@ -12,7 +12,7 @@ Block (NYSE: XYZ) — a multi-brand financial technology company.
 - **Spreadsheets:** Excel, Google Sheets
 - **Docs:** Google Docs
 - **Comms:** Slack
-- **MCP servers:** None currently connected
+- **MCP servers:** Planned — Google Workspace MCP (pending Mac migration; see `references/sops/google-workspace-mcp-setup.md`)
 
 ## Data
 - Governed data lives in Google Sheets tables

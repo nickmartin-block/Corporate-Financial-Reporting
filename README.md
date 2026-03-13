@@ -1,11 +1,31 @@
-# Block FP&A — Global Reporting Recipe
+# Block FP&A — Financial Reporting Automation
 
-Master recipe/constitution for Block financial reporting agents.
-All sub-agents must inherit from this before applying deliverable-specific logic.
+Agent infrastructure for automating Block financial reporting deliverables.
 
 ## What's in here
-- `SKILL.md` — the full recipe: data rules, metric formats, style standards, and sub-agent inheritance instructions
+
+| File / Folder | Description |
+|---------------|-------------|
+| `SKILL.md` | Global reporting recipe — data rules, metric formats, style standards, sub-agent inheritance |
+| `docs/weekly-report-plan.md` | Weekly report sub-agent architecture + Mac Day 1 kickoff prompt |
+| `decisions/log.md` | Append-only log of key architecture and process decisions |
+| `references/fpa-style-guide.md` | Block FP&A Style & Formatting Guide |
 
 ## How to use
-Load `SKILL.md` as the first instruction set for any Block reporting agent.
-Sub-agent-specific logic applies on top — these standards may not be overridden.
+
+**Starting a new reporting agent:**
+1. Load `SKILL.md` first — these standards apply to all agents and may not be overridden
+2. Apply deliverable-specific logic on top
+
+**Building the weekly report sub-agent (Mac Day 1):**
+See `docs/weekly-report-plan.md` for the full architecture and kickoff prompt.
+Requires Google Workspace MCP connected to Google Drive, Sheets, and Docs.
+
+## Roadmap
+
+| Deliverable | Status |
+|-------------|--------|
+| Global reporting recipe | Complete |
+| Weekly report sub-agent | Architecture planned — pending Mac + MCP |
+| Monthly reporting pack (MRP) sub-agent | Future |
+| Board report sub-agent | Future |

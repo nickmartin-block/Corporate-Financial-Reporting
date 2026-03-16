@@ -70,11 +70,17 @@ Store these as your **ground truth**. Every Doc value will be checked against th
 
 ## Step 4 — Read the Doc tab
 
+First list tabs to find the tab ID for the target date (e.g., `3/17`):
 ```bash
-cd ~/skills/gdrive && uv run gdrive-cli.py docs get 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0
+cd ~/skills/gdrive && uv run gdrive-cli.py docs tabs 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0
 ```
 
-Locate the most recent dated tab (or the tab specified by the user) by traversing `childTabs` under the current quarter parent (e.g., `1Q26`). Extract:
+Then read that specific tab by ID (do NOT use `docs get` alone — it dumps all tabs and is unreliable for extracting a specific tab's content):
+```bash
+cd ~/skills/gdrive && uv run gdrive-cli.py read 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0 --tab <tab_id>
+```
+
+Extract:
 - All table cell values
 - All fact lines (text content of bullet/body paragraphs)
 - The emoji prefix on each fact line

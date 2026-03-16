@@ -76,13 +76,14 @@ Apply to each metric's **delta vs. [Forecast]**:
 
 ## Step 5 — Review the prior week's tab
 
+First, list all tabs to find the most recent dated tab (e.g., `3/10`):
 ```bash
 cd ~/skills/gdrive && uv run gdrive-cli.py docs tabs 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0
 ```
 
-Then read the most recent dated tab from the full doc JSON:
+Then read that specific tab by its tab ID (do NOT use `docs get` — it dumps all tabs as unstructured JSON):
 ```bash
-cd ~/skills/gdrive && uv run gdrive-cli.py docs get 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0
+cd ~/skills/gdrive && uv run gdrive-cli.py read 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0 --tab <prior_tab_id>
 ```
 
 Mirror this structure exactly — section order, table layout, fact line style.
@@ -91,16 +92,51 @@ Mirror this structure exactly — section order, table layout, fact line style.
 
 ## Step 6 — Create the new tab
 
-Label: this Tuesday's date (e.g., `3/24`). Create as a child tab under the current quarter parent (e.g., `1Q26`) using `docs batch-update`.
+Label: this Tuesday's date (e.g., `3/24`). First get the parent tab ID for the current quarter (e.g., `1Q26`) from the `docs tabs` output in Step 5. Then create the new tab as a child:
+
+```bash
+echo '{
+  "requests": [{
+    "createTab": {
+      "tabProperties": {
+        "title": "3/24",
+        "nestingLevel": 1,
+        "parentTabId": "<1Q26_tab_id>"
+      }
+    }
+  }]
+}' | cd ~/skills/gdrive && uv run gdrive-cli.py docs batch-update 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0
+```
+
+The response will include the new tab's `tabId` — save this; you will use it in every subsequent write command.
 
 ---
 
 ## Step 7 — Populate the report
 
-### 7a — Document title
+### 7a — Write all content with insert-markdown
+
+Use `docs insert-markdown` to write all content into the new tab. This command accepts markdown from stdin and handles headings, tables, bold, and bullets reliably — do NOT use `docs batch-update` for content.
+
+```bash
+cat <<'EOF' | cd ~/skills/gdrive && uv run gdrive-cli.py docs insert-markdown 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0 --tab <new_tab_id>
+# Block Performance Digest
+
+## Summary
+...fact lines...
+
+## Overview: Gross Profit Performance
+| 2026 | 2026 | 2026 | | 2026 | 2026 | 2026 | 2026 |
+|------|------|------|---|------|------|------|------|
+| Actual | Actual | Pacing | | Pacing | Annual Plan | Guidance | Consensus |
+| January | February | March | | Q1 | Q1 | Q1 | Q1 |
+...data rows...
+
+...fact lines...
+EOF
 ```
-Block Performance Digest
-```
+
+Write the entire tab content in a single `insert-markdown` call where possible. If the content is too large, split by section — one call per section, each with `--tab <new_tab_id>`.
 
 ### 7b — Section order (exact)
 1. Summary
@@ -132,23 +168,45 @@ YoY is included in the fact line text but does NOT affect the emoji.
 
 ### 7d — Tables
 
-Insert a static data table per section via `docs batch-update`. Standard column structure:
+Use markdown table syntax inside the `insert-markdown` call. Standard column structure:
 
-| Row | Columns |
-|-----|---------|
-| Header 1 | Year (e.g., 2026) repeated across each column |
-| Header 2 | Actual \| Actual \| Pacing \| (blank) \| Pacing \| Annual Plan \| Guidance \| Consensus |
-| Header 3 | January \| February \| March \| (blank) \| Q1 \| Q1 \| Q1 \| Q1 |
+```
+| 2026 | 2026 | 2026 | | 2026 | 2026 | 2026 | 2026 |
+|------|------|------|---|------|------|------|------|
+| Actual | Actual | Pacing | | Pacing | Annual Plan | Guidance | Consensus |
+| January | February | March | | Q1 | Q1 | Q1 | Q1 |
+```
 
-- Omit Guidance or Consensus columns if unavailable.
+- Omit Guidance or Consensus columns if unavailable for that metric.
 - Use `--` for N/A cells.
 - Place each table immediately after the section heading, before the fact lines.
 
 ### 7e — Driver placeholders
 
-After any fact line with a meaningful variance or notable trend, insert on a new line:
+After all content is written, apply red color (#ea4335) to each "Nick to fill out" line using a targeted `batch-update`. First get the current end index of the doc tab (from `docs get --tab <new_tab_id>`), then search for the placeholder text index and apply:
 
-**Nick to fill out** — in red (hex #ea4335) using `docs batch-update` → `updateTextStyle`.
+```bash
+echo '{
+  "requests": [{
+    "replaceAllText": {
+      "containsText": {"text": "Nick to fill out", "matchCase": true},
+      "replaceText": "Nick to fill out"
+    }
+  }, {
+    "updateTextStyle": {
+      "textStyle": {"foregroundColor": {"color": {"rgbColor": {"red": 0.918, "green": 0.263, "blue": 0.208}}}},
+      "fields": "foregroundColor",
+      "range": {"startIndex": <start>, "endIndex": <end>, "tabId": "<new_tab_id>"}
+    }
+  }]
+}' | cd ~/skills/gdrive && uv run gdrive-cli.py docs batch-update 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0
+```
+
+To find the character indices of each "Nick to fill out" occurrence, read the tab's structural JSON after inserting content:
+```bash
+cd ~/skills/gdrive && uv run gdrive-cli.py docs get 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0 --tab <new_tab_id>
+```
+Then issue one `updateTextStyle` request per occurrence with its exact `startIndex`/`endIndex`.
 
 ### 7f — Missing data
 

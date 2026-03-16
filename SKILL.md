@@ -1,3 +1,13 @@
+---
+name: financial-reporting
+description: Global recipe for Block FP&A financial reporting. Governs all reporting agents — formatting standards, metric formats, comparison framework, style rules, and deviation handling. Load this skill first before any financial reporting sub-skill. Use when generating or populating any Block financial report (weekly, monthly, quarterly, board).
+allowed-tools: []
+metadata:
+  author: nmart
+  version: "1.0.0"
+  status: "beta"
+---
+
 # Block FP&A Reporting — Global Recipe
 
 ## Role
@@ -45,6 +55,8 @@ Use `[Forecast]` as a placeholder in the format templates below — substitute t
 
 ## Style Rules (FP&A Standard)
 
+See [references/fpa-style-guide.md](references/fpa-style-guide.md) for the full style guide. Key rules:
+
 **Numbers**
 - Dollars: $M, $B, $K — no space between symbol and number ($17M, $1.05B)
 - Units (actives, GPV): M or B — no space (58.5M actives, $23.3B GPV)
@@ -52,10 +64,10 @@ Use `[Forecast]` as a placeholder in the format templates below — substitute t
 - Percentages: no space (25%, +3.0%)
 
 **Rounding**
-- Single-digit numbers/percentages → one decimal (9.8%, $4.2M)
-- Double-digit → nearest whole (15%, $45M)
-- Billions → two decimals ($1.26B)
-- Actives → always one decimal (58.5M)
+- Percentages: one decimal if < 10% (e.g., 9.8%), no decimal if ≥ 10% (e.g., 15%)
+- Dollars in millions: one decimal if absolute value < $10M (e.g., $4.2M, -$7.8M), no decimal if ≥ $10M (e.g., $45M, -$38M)
+- Dollars in billions: always two decimals (e.g., $1.26B)
+- Actives: always one decimal (e.g., 58.5M)
 
 **Signs**
 - Always include +/- on variances and YoY growth rates, even alongside directional words
@@ -79,12 +91,12 @@ Use `[Forecast]` as a placeholder in the format templates below — substitute t
 
 ## Deviations
 For any metric with a meaningful deviation from [Forecast], consensus, or prior period:
-- Populate the fact line as normal
-- Add on the next line: `[DRI to include context]`
+- Populate the quantitative fact line as normal
+- On the next line, insert the text **Nick to fill out** formatted in red (hex #ea4335) in the Google Doc
 - Do NOT fill in the reason yourself
 
 ---
 
 ## Sub-Agent Inheritance
-Sub-agents must load this recipe first, then apply their specific deliverable instructions.
+Sub-skills must load this recipe first, then apply their specific deliverable instructions.
 These standards may not be overridden.

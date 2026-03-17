@@ -10,6 +10,12 @@ You are the Block FP&A weekly report agent. You populate the Weekly Performance 
 
 ---
 
+## Reference: 3/10 tab
+
+The 3/10 tab (tab ID: `t.kock4ypqjpk6`) in the Weekly Report Doc is the canonical structure reference. Every new tab must mirror it exactly: section order, heading names, table layout, and fact line style. Do not read the 3/10 tab at runtime — the structure is fully defined in this skill.
+
+---
+
 ## Inputs
 
 - **Master Google Sheet:** `1hvKbg3t08uG2gbnNjag04RNHbu9rddIU4woudxeH1d4`
@@ -42,18 +48,32 @@ Substitute this label for `[Forecast]` everywhere below.
 
 ---
 
-## Step 3 — Read the master Google Sheet
+## Step 3 — Read sheet and doc tabs in parallel
+
+Run both commands simultaneously, wait for both to finish, then read results:
 
 ```bash
-cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 1hvKbg3t08uG2gbnNjag04RNHbu9rddIU4woudxeH1d4 --all-sheets
+cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 1hvKbg3t08uG2gbnNjag04RNHbu9rddIU4woudxeH1d4 --sheet summary > /tmp/weekly_sheet.json 2>&1 &
+SHEET_PID=$!
+
+cd ~/skills/gdrive && uv run gdrive-cli.py docs tabs 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0 > /tmp/weekly_tabs.json 2>&1 &
+TABS_PID=$!
+
+wait $SHEET_PID $TABS_PID
+cat /tmp/weekly_sheet.json
+cat /tmp/weekly_tabs.json
 ```
 
-For each metric, capture:
+From the sheet data, capture for each metric:
 - Monthly actuals (closed periods)
 - Current-month pacing value
 - QTD pacing value
-- **Delta vs. [Forecast] (%)** — this is the sole input for emoji determination
-- Consensus and guidance where available
+- **Delta vs. [Forecast] (%)** — sole input for emoji determination
+- YoY growth rate
+- Dollar delta vs. [Forecast]
+- Consensus and guidance values where present
+
+From the tabs output, find the tab ID for the current quarter parent tab (e.g., `1Q26`). Save this as `<parent_tab_id>`.
 
 ---
 
@@ -74,25 +94,9 @@ Apply to each metric's **delta vs. [Forecast]**:
 
 ---
 
-## Step 5 — Review the prior week's tab
+## Step 5 — Create the new tab
 
-First, list all tabs to find the most recent dated tab (e.g., `3/10`):
-```bash
-cd ~/skills/gdrive && uv run gdrive-cli.py docs tabs 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0
-```
-
-Then read that specific tab by its tab ID (do NOT use `docs get` — it dumps all tabs as unstructured JSON):
-```bash
-cd ~/skills/gdrive && uv run gdrive-cli.py read 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0 --tab <prior_tab_id>
-```
-
-Mirror this structure exactly — section order, table layout, fact line style.
-
----
-
-## Step 6 — Create the new tab
-
-Label: this Tuesday's date (e.g., `3/24`). First get the parent tab ID for the current quarter (e.g., `1Q26`) from the `docs tabs` output in Step 5. Then create the new tab as a child:
+Label: this Tuesday's date (e.g., `3/24`). Create as a child of `<parent_tab_id>`:
 
 ```bash
 echo '{
@@ -101,118 +105,260 @@ echo '{
       "tabProperties": {
         "title": "3/24",
         "nestingLevel": 1,
-        "parentTabId": "<1Q26_tab_id>"
+        "parentTabId": "<parent_tab_id>"
       }
     }
   }]
 }' | cd ~/skills/gdrive && uv run gdrive-cli.py docs batch-update 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0
 ```
 
-The response will include the new tab's `tabId` — save this; you will use it in every subsequent write command.
+Save the returned `tabId` as `<new_tab_id>`. You will use it in every subsequent write command.
 
 ---
 
-## Step 7 — Populate the report
+## Step 6 — Populate the report
 
-### 7a — Write all content with insert-markdown
+### 6a — Write all content in a single insert-markdown call
 
-Use `docs insert-markdown` to write all content into the new tab. This command accepts markdown from stdin and handles headings, tables, bold, and bullets reliably — do NOT use `docs batch-update` for content.
+Write the entire tab in **one** `insert-markdown` call. Only split into multiple calls if the content exceeds shell limits. Use `--tab <new_tab_id>` on every call.
 
 ```bash
 cat <<'EOF' | cd ~/skills/gdrive && uv run gdrive-cli.py docs insert-markdown 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0 --tab <new_tab_id>
 # Block Performance Digest
 
 ## Summary
-...fact lines...
+
+[Full summary section — see 6b]
 
 ## Overview: Gross Profit Performance
-| 2026 | 2026 | 2026 | | 2026 | 2026 | 2026 | 2026 |
-|------|------|------|---|------|------|------|------|
-| Actual | Actual | Pacing | | Pacing | Annual Plan | Guidance | Consensus |
-| January | February | March | | Q1 | Q1 | Q1 | Q1 |
-...data rows...
 
-...fact lines...
+[Table + fact lines — see 6c]
+
+## Overview: Adjusted Operating Income & Rule of 40
+
+[Table + fact lines — see 6d]
+
+## Overview: Inflows Framework
+
+[Tables + fact lines — see 6e]
+
+## Overview: Square GPV
+
+[Table + fact lines — see 6f]
 EOF
 ```
 
-Write the entire tab content in a single `insert-markdown` call where possible. If the content is too large, split by section — one call per section, each with `--tab <new_tab_id>`.
+### 6b — Summary section
 
-### 7b — Section order (exact)
-1. Summary
-2. Overview: Gross Profit Performance
-3. Overview: Adjusted Operating Income & Rule of 40
-4. Overview: Inflows Framework
-5. Overview: Square GPV
-
-### 7c — Fact line format
-
-Every fact line starts with the emoji from Step 4.
-
-**Pacing:**
-```
-[emoji][Metric] is pacing to [Value] in [Period] ([+/-]% YoY), [+/-Delta]% ([+/-$Delta]) [above/below] [Forecast]
-```
-
-**Actuals:**
-```
-[emoji][Metric] landed at [Value] ([+/-]% YoY), [+/-Delta]% ([+/-$Delta]) [above/below] [Forecast]
-```
-
-Example:
-```
-🟢Block gross profit is pacing to $1.05B in March (+25% YoY), +1.6% (+$17M) above AP.
-```
-
-YoY is included in the fact line text but does NOT affect the emoji.
-
-### 7d — Tables
-
-Use markdown table syntax inside the `insert-markdown` call. Standard column structure:
+The Summary section contains one topline fact line per major metric group, each followed by a `Nick to fill out` driver placeholder. Write it in this order, exactly:
 
 ```
-| 2026 | 2026 | 2026 | | 2026 | 2026 | 2026 | 2026 |
-|------|------|------|---|------|------|------|------|
-| Actual | Actual | Pacing | | Pacing | Annual Plan | Guidance | Consensus |
-| January | February | March | | Q1 | Q1 | Q1 | Q1 |
+🟢 **Topline:** **Block gross profit** is pacing to [QTD value] in Q1 ([QTD YoY]% YoY), [+/-Delta]% ([+/-$Delta]) above [Forecast] and [+/-]% ([+/-$]) above guidance. **Block gross profit** is pacing [+/-Delta]% ([+/-$Delta]) [above/below] [Forecast] in [Month]. Nick to fill out
+
+🟢 **Square GPV:** In [Month], global GPV is pacing to [Value] ([YoY]% YoY), [+/-]% [above/below] [Forecast]. For the quarter, global GPV is pacing to [QTD Value] ([QTD YoY]% YoY), [+/-]% [above/below] [Forecast]. Nick to fill out
+🟢 **US GPV** is pacing to [Value] ([YoY]% YoY) in [Month], [+/-]% [above/below] [Forecast]. For the quarter, US GPV growth of [QTD YoY]% YoY is [above/in-line with/below] consensus.
+🟢 **International GPV** is pacing to [Value] in [Month] ([YoY]% YoY), [+/-]% [above/below] [Forecast].
+🟡 **Cash ex-Commerce gross profit** is pacing [+/-Delta]% ([+/-$Delta]) [above/below] [Forecast] in [Month], and [YoY]% YoY. Nick to fill out
+🔴 **Lending vs. Non Lending (YoY):** Nick to fill out
+🟢 **Lending (vs. [Forecast]):** [QTD lending GP] is pacing [+/-]% ([+/-$]) [ahead of/below] [Forecast].
+🟢 **Non-Lending (vs. [Forecast]):** [QTD non-lending GP] is pacing [+/-]% ([+/-$]) [ahead of/below] [Forecast].
+**Inflows Framework:**
+🟡 **Actives** are pacing to [Value] ([YoY]% YoY) in [Month], [+/-]% [above/below] [Forecast].
+🟢 **Inflows per active** are pacing to [Value] ([YoY]% YoY) in [Month], [+/-]% [above/below] [Forecast]
+🟢 **Monetization Rate** is pacing to [Value] ([+/-] bps YoY) in [Month], [+/-] bps [above/below] [Forecast]
+🟡 **Commerce gross profit** is pacing [+/-]% ([+/-$]) [ahead of/below] [Forecast] in [Month].
+🟡 **Inflows (vs. [Forecast])** are pacing to [Value] ([YoY]% YoY) in [Month], [+/-]% [above/below] [Forecast]
+🟡 **Monetization rate (vs. [Forecast])** is pacing to [Value] ([+/-] bps YoY) in [Month], [in line with/above/below] [Forecast]
+🟡 **Proto gross profit** is pacing [in line with/above/below] [Forecast] in [Month]. Nick to fill out
+
+🟢 **Profitability:** Q1 **Adjusted Operating Income** is pacing to [QTD Value] ([Margin]% margin), [+/-]% ([+/-$]) [above/below] guidance, and [+/-]% ([+/-$]) [above/below] consensus. Nick to fill out
 ```
 
-- Omit Guidance or Consensus columns if unavailable for that metric.
-- Use `--` for N/A cells.
-- Place each table immediately after the section heading, before the fact lines.
+### 6c — Overview: Gross Profit Performance
 
-### 7e — Driver placeholders
+Place the table first, then the fact lines.
 
-After all content is written, apply red color (#ea4335) to each "Nick to fill out" line using a targeted `batch-update`. First get the current end index of the doc tab (from `docs get --tab <new_tab_id>`), then search for the placeholder text index and apply:
+**Table:**
 
-```bash
-echo '{
-  "requests": [{
-    "replaceAllText": {
-      "containsText": {"text": "Nick to fill out", "matchCase": true},
-      "replaceText": "Nick to fill out"
-    }
-  }, {
-    "updateTextStyle": {
-      "textStyle": {"foregroundColor": {"color": {"rgbColor": {"red": 0.918, "green": 0.263, "blue": 0.208}}}},
-      "fields": "foregroundColor",
-      "range": {"startIndex": <start>, "endIndex": <end>, "tabId": "<new_tab_id>"}
-    }
-  }]
-}' | cd ~/skills/gdrive && uv run gdrive-cli.py docs batch-update 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0
+| Metric | Jan'26 Actual | Feb'26 Actual | Mar'26 Pacing | Q1'26 Pacing | Q1 AP | Q1 Guidance | Q1 Consensus |
+|--------|---------------|---------------|---------------|--------------|-------|-------------|--------------|
+| Block gross profit | | | | | | | |
+| YoY Growth (%) | | | | | | | |
+| Delta vs. AP (%) | | | | | | | |
+| | | | | | | | |
+| Cash App gross profit | | | | | | | |
+| YoY Growth (%) | | | | | | | |
+| Delta vs. AP (%) | | | | | | | |
+| | | | | | | | |
+| Square gross profit | | | | | | | |
+| YoY Growth (%) | | | | | | | |
+| Delta vs. AP (%) | | | | | | | |
+| | | | | | | | |
+| Proto gross profit | | | | | | | |
+| YoY Growth (%) | | | | | | | |
+| Delta vs. AP (%) | | | | | | | |
+| | | | | | | | |
+| TIDAL gross profit | | | | | | | |
+| YoY Growth (%) | | | | | | | |
+| Delta vs. AP (%) | | | | | | | |
+
+- Omit Guidance or Consensus columns if unavailable for that metric; use `--` for N/A cells.
+- Populate all cells from the sheet data captured in Step 3.
+
+**Fact lines (after table):**
+
+```
+[emoji] **Block gross profit** is pacing to [Value] in [Month] ([YoY]% YoY), [+/-Delta]% ([+/-$Delta]) [above/below] [Forecast].
+[emoji] **Cash App gross profit** is pacing to [Value] in [Month] ([YoY]% YoY), [+/-Delta]% ([+/-$Delta]) [above/below] [Forecast].
+[emoji] **Square gross profit** is pacing to [Value] in [Month] ([YoY]% YoY), relatively [in-line with / above / below] [Forecast].
+[emoji] **Proto gross profit** is pacing [in-line with/above/below] [Forecast] for the quarter.
+[emoji] **TIDAL gross profit** is pacing to [Value] ([YoY]% YoY), [in-line with/above/below] [Forecast].
+Q1'26 Block gross profit is expected to land at [QTD Value] ([QTD YoY]% YoY), [+/-Delta]% ([+/-$Delta]) [above/below] [Forecast], [+/-]% ([+/-$]) [above/below] guidance.
 ```
 
-To find the character indices of each "Nick to fill out" occurrence, read the tab's structural JSON after inserting content:
+### 6d — Overview: Adjusted Operating Income & Rule of 40
+
+Place the table first, then the fact lines.
+
+**Table:**
+
+| Metric | Jan'26 Actual | Feb'26 Actual | Mar'26 Pacing | Q1'26 Pacing | Q1 AP | Q1 Guidance | Q1 Consensus |
+|--------|---------------|---------------|---------------|--------------|-------|-------------|--------------|
+| Gross profit | | | | | | | |
+| YoY Growth (%) | | | | | | | |
+| Delta vs. AP (%) | | | | | | | |
+| | | | | | | | |
+| Adjusted operating income | | | | | | | |
+| Margin (%) | | | | | | | |
+| Delta vs. AP (%) | | | | | | | |
+| | | | | | | | |
+| Rule of 40 | | | | | | | |
+| Delta vs. AP (pts) | | | | | | | |
+
+**Fact lines (after table):**
+
+```
+[emoji] **Adjusted Operating Income** is expected to land at [Value] ([Margin]% margin) in [Month], +$[Delta] above [Forecast] (GP [+/-$], OpEx [+/-$] favorable).
+We expect to achieve Rule of [X] in [Month] ([GP Growth]% growth, [Margin]% margin), [+/-] pts [above/below] [Forecast]
+For the quarter, **Adjusted Operating Income** is expected to land at [QTD Value] ([QTD Margin]% margin), [+/-]% ([+/-$]) [ahead of/below] consensus, and [+/-]% ([+/-$]) [above/below] [Forecast].
+For the quarter, the business is expected to deliver Rule of [X] ([QTD Growth]% growth, [QTD Margin]% margin), [+/-] pts [above/below] guidance and consensus.
+```
+
+### 6e — Overview: Inflows Framework
+
+Two sub-sections: **Cash App (Ex Commerce)** and **Commerce**. Each has a table followed by fact lines.
+
+**Cash App (Ex Commerce) table:**
+
+| Metric | Jan'26 Actual | Feb'26 Actual | Mar'26 Pacing | Q1'26 Pacing | Q1 AP | Q1 Consensus |
+|--------|---------------|---------------|---------------|--------------|-------|--------------|
+| Actives | | | | | | |
+| YoY Growth (%) | | | | | | |
+| Delta vs. AP (%) | | | | | | |
+| | | | | | | |
+| Inflows per Active | | | | | | |
+| YoY Growth (%) | | | | | | |
+| Delta vs. AP (%) | | | | | | |
+| | | | | | | |
+| Monetization rate | | | | | | |
+| YoY Growth (%) | | | | | | |
+| Delta vs. AP (%) | | | | | | |
+
+**Cash App (Ex Commerce) fact lines:**
+
+```
+[emoji] **Actives** are pacing to [Value] ([YoY]% YoY) in [Month], [+/-]% [above/below] [Forecast], [+/-]M MoM
+[emoji] **Inflows per active** are projected to land at [Value] ([YoY]% YoY) in [Month], [+/-]% [above/below] [Forecast]
+[emoji] **Monetization rate** is projected to land at [Value] ([+/-] bps YoY) in [Month], [+/-] bps [above/below] [Forecast]
+```
+
+**Commerce table:**
+
+| Metric | Jan'26 Actual | Feb'26 Actual | Mar'26 Pacing | Q1'26 Pacing | Q1 AP |
+|--------|---------------|---------------|---------------|--------------|-------|
+| Inflows | | | | | |
+| YoY Growth (%) | | | | | |
+| Delta vs. AP (%) | | | | | |
+| | | | | | |
+| Monetization rate | | | | | |
+| YoY Growth (%) | | | | | |
+| Delta vs. AP (%) | | | | | |
+
+**Commerce fact lines:**
+
+```
+[emoji] **Inflows** are pacing to [Value] ([YoY]% YoY) in [Month], [+/-]% [above/below] [Forecast]
+[emoji] **Monetization rate** is pacing to [Value] ([+/-] bps YoY) in [Month], [in line with/above/below] [Forecast]
+```
+
+### 6f — Overview: Square GPV
+
+Place the table first, then the fact lines.
+
+**Table:**
+
+| Metric | Jan'26 Actual | Feb'26 Actual | Mar'26 Pacing | Q1'26 Pacing | Q1 AP | Q1 Consensus |
+|--------|---------------|---------------|---------------|--------------|-------|--------------|
+| Global GPV | | | | | | |
+| YoY Growth (%) | | | | | | |
+| Delta vs. AP (%) | | | | | | |
+| | | | | | | |
+| US GPV | | | | | | |
+| YoY Growth (%) | | | | | | |
+| Delta vs. AP (%) | | | | | | |
+| | | | | | | |
+| International GPV | | | | | | |
+| YoY Growth (%) | | | | | | |
+| Delta vs. AP (%) | | | | | | |
+
+**Fact lines (after table):**
+
+```
+[emoji] **Global GPV** is pacing to [Value] in [Month] ([YoY]% YoY), [+/-]% [above/below] [Forecast]
+[emoji] **US GPV** is pacing to [Value] in [Month] ([YoY]% YoY), [+/-]% [above/below] [Forecast]
+[emoji] **International GPV** is pacing to [Value] in [Month] ([YoY]% YoY), [+/-]% [above/below] [Forecast]
+For the quarter, we expect global GPV growth of [+/-]% YoY, [+/-] pts [above/below] [Forecast]
+GPV to GP Spread: Pacing [+/-] pts vs. consensus [+/-] pts
+```
+
+### 6g — Missing data
+
+Use `[DATA MISSING: {metric} | {period}]` for any value absent from the sheet.
+
+---
+
+## Step 7 — Color the "Nick to fill out" placeholders
+
+After all content is written, read the new tab's JSON once to find every occurrence of "Nick to fill out":
+
 ```bash
 cd ~/skills/gdrive && uv run gdrive-cli.py docs get 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0 --tab <new_tab_id>
 ```
-Then issue one `updateTextStyle` request per occurrence with its exact `startIndex`/`endIndex`.
 
-### 7f — Missing data
+Then issue a **single** `batch-update` with one `updateTextStyle` request per occurrence — all in one call:
 
+```bash
+echo '{
+  "requests": [
+    {
+      "updateTextStyle": {
+        "textStyle": {"foregroundColor": {"color": {"rgbColor": {"red": 0.918, "green": 0.263, "blue": 0.208}}}},
+        "fields": "foregroundColor",
+        "range": {"startIndex": <start1>, "endIndex": <end1>, "tabId": "<new_tab_id>"}
+      }
+    },
+    {
+      "updateTextStyle": {
+        "textStyle": {"foregroundColor": {"color": {"rgbColor": {"red": 0.918, "green": 0.263, "blue": 0.208}}}},
+        "fields": "foregroundColor",
+        "range": {"startIndex": <start2>, "endIndex": <end2>, "tabId": "<new_tab_id>"}
+      }
+    }
+  ]
+}' | cd ~/skills/gdrive && uv run gdrive-cli.py docs batch-update 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0
 ```
-[DATA MISSING: {metric} | {period}]
-```
+
+Add one `updateTextStyle` block per occurrence — do not issue separate `batch-update` calls.
 
 ---
 
@@ -269,4 +415,5 @@ Return a summary listing:
 - Fill in drivers, narrative, or explanations
 - Estimate or infer missing data
 - Change number formatting beyond the rules above
+- Read the 3/10 tab at runtime — structure is already defined in this skill
 - Self-trigger or run automatically

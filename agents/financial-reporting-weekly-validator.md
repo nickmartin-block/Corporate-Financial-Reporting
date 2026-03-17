@@ -49,10 +49,20 @@ This label is used for all delta and emoji validation below.
 
 ---
 
-## Step 3 — Read the master Google Sheet
+## Step 3 — Read sheet and doc tabs in parallel
+
+Run both commands simultaneously, wait for both to finish, then read results:
 
 ```bash
-cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 1hvKbg3t08uG2gbnNjag04RNHbu9rddIU4woudxeH1d4 --all-sheets
+cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 1hvKbg3t08uG2gbnNjag04RNHbu9rddIU4woudxeH1d4 --sheet summary > /tmp/weekly_sheet.json 2>&1 &
+SHEET_PID=$!
+
+cd ~/skills/gdrive && uv run gdrive-cli.py docs tabs 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0 > /tmp/weekly_tabs.json 2>&1 &
+TABS_PID=$!
+
+wait $SHEET_PID $TABS_PID
+cat /tmp/weekly_sheet.json
+cat /tmp/weekly_tabs.json
 ```
 
 For each metric, record:
@@ -70,12 +80,9 @@ Store these as your **ground truth**. Every Doc value will be checked against th
 
 ## Step 4 — Read the Doc tab
 
-First list tabs to find the tab ID for the target date (e.g., `3/17`):
-```bash
-cd ~/skills/gdrive && uv run gdrive-cli.py docs tabs 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0
-```
+The `docs tabs` output is already in `/tmp/weekly_tabs.json` from Step 3. Find the tab ID for the target date (e.g., `3/17`) from that file — do not re-fetch.
 
-Then read that specific tab by ID (do NOT use `docs get` alone — it dumps all tabs and is unreliable for extracting a specific tab's content):
+Then read that specific tab by ID:
 ```bash
 cd ~/skills/gdrive && uv run gdrive-cli.py read 1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0 --tab <tab_id>
 ```

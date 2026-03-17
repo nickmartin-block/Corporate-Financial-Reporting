@@ -71,7 +71,7 @@ The Summary is a narrative block of emoji-prefixed fact lines. Mirror the 3/10 S
 - Then **Inflows Framework** block (Actives, Inflows per active, Monetization rate, Commerce lines, Proto)
 - Closes with **Profitability** (AOI QTD and monthly, Rule of 40)
 
-After each major block where driver context would normally follow, insert `Nick to fill out` on a new line (will be colored red by the agent in a later step).
+After each major block where driver context would normally follow, insert `«RED»Nick to fill out«/RED»` on a new line.
 
 ---
 
@@ -92,6 +92,12 @@ Separate each group with a blank row.
 
 **Fact lines (after table):** One per brand — Block GP, Cash App GP, Square GP, Proto GP, TIDAL GP — plus a QTD summary line for Block. Mirror 3/10 wording and order.
 
+**Consensus comparison on QTD Block gross profit fact line:** Append vs. consensus at the end:
+```
+[emoji]Block gross profit is pacing to [Value] in Q1 ([+/-]% YoY), [+/-Delta]% ([+/-$Delta]) [above/below] AP, [+/-Delta]% ([+/-$Delta]) [above/below] consensus.
+```
+Only include the consensus clause if a Q1 consensus value is present in the Sheet.
+
 ---
 
 ## Section 3 — Overview: Adjusted Operating Income & Rule of 40
@@ -105,6 +111,12 @@ Separate each group with a blank row.
 
 **Fact lines (after table):** Monthly AOI (value, margin, delta vs. AP), Rule of 40 for the month, QTD AOI (value, margin, vs. guidance and consensus), QTD Rule of 40.
 
+**Consensus comparison on QTD AOI fact line:** Append vs. consensus at the end:
+```
+[emoji]Adjusted operating income is pacing to [Value] in Q1 ([Margin]% margin), [+/-Delta]% ([+/-$Delta]) [above/below] AP, [+/-Delta]% ([+/-$Delta]) [above/below] consensus.
+```
+Only include the consensus clause if a Q1 consensus value is present in the Sheet.
+
 ---
 
 ## Section 4 — Overview: Inflows Framework
@@ -117,6 +129,12 @@ Two sub-sections: **Cash App (Ex Commerce)** and **Commerce**. Each has its own 
 - Actives / YoY Growth (%) / Delta vs. AP (%)
 - Inflows per Active / YoY Growth (%) / Delta vs. AP (%)
 - Monetization rate / YoY Growth (bps) / Delta vs. AP (bps)
+
+**Consensus comparison on end-of-quarter Cash App Actives fact line:** Append vs. consensus at the end:
+```
+[emoji]Cash App monthly actives are pacing to [Value] at end of Q1 ([+/-]% YoY), [+/-Delta]% ([+/-M Delta]) [above/below] AP, [+/-Delta]% ([+/-M Delta]) [above/below] consensus.
+```
+Only include the consensus clause if a Q1 consensus value is present in the Sheet. Apply actives rounding (one decimal, e.g. 58.5M).
 
 **Commerce table columns:** Metric | Jan'26 Actual | Feb'26 Actual | Mar'26 Pacing | Q1'26 Pacing | Q1 AP
 
@@ -136,6 +154,12 @@ Two sub-sections: **Cash App (Ex Commerce)** and **Commerce**. Each has its own 
 - International GPV / YoY Growth (%) / Delta vs. AP (%)
 
 **Fact lines (after table):** Global GPV, US GPV, International GPV monthly pacing lines, QTD summary line, GPV-to-GP spread note.
+
+**Consensus comparison on QTD Global GPV fact line:** Append vs. consensus at the end:
+```
+[emoji]Square GPV is pacing to [Value] in Q1 ([+/-]% YoY), [+/-Delta]% ([+/-$Delta]) [above/below] AP, [+/-Delta]% ([+/-$Delta]) [above/below] consensus.
+```
+Only include the consensus clause if a Q1 consensus value is present in the Sheet.
 
 ---
 

@@ -5,3 +5,7 @@ node_modules/
 skills/weekly-reporting/gdrive/__pycache__/
 **/__pycache__/
 .DS_Store
+# OAuth and credential files - never commit these
+gcp-oauth.keys.json
+credentials.json
+*.keys.json

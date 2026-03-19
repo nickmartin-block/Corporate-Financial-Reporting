@@ -22,30 +22,18 @@ SCOPES = [
     "https://www.googleapis.com/auth/directory.readonly",
 ]
 
-# Bundled OAuth client config (same as gconf's gcp-oauth.keys.json)
-# This is a public OAuth client for the skill
-BUNDLED_OAUTH_CONFIG = {
-    "installed": {
-        "client_id": "1068149091008-l4vkd51g43fioqph3siko1lelm90r7kp.apps.googleusercontent.com",
-        "project_id": "sq-goose-gwork-mcp-prod",
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_secret": "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",
-        "redirect_uris": ["http://localhost"],
-    }
-}
-
-
 def get_oauth_config() -> dict[str, Any]:
-    """Get OAuth client configuration.
-    
-    Checks for user-provided config file first, falls back to bundled config.
+    """Get OAuth client configuration from external config file.
+
+    Reads from ~/.config/gdrive-skill/gcp-oauth.keys.json.
     """
-    if OAUTH_KEYS_PATH.exists():
-        with open(OAUTH_KEYS_PATH) as f:
-            return json.load(f)
-    return BUNDLED_OAUTH_CONFIG
+    if not OAUTH_KEYS_PATH.exists():
+        raise RuntimeError(
+            f"OAuth config not found at {OAUTH_KEYS_PATH}. "
+            "Place your gcp-oauth.keys.json file there to authenticate."
+        )
+    with open(OAUTH_KEYS_PATH) as f:
+        return json.load(f)
 
 
 def get_credentials(force_refresh: bool = False) -> Credentials | None:

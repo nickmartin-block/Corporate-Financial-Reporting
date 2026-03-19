@@ -1,83 +1,100 @@
-# Block FP&A — Financial Reporting Automation
+# Block Weekly Performance Digest — Automation
 
-Agent infrastructure for automating Block financial reporting deliverables using Claude Code.
-
----
-
-## System Map
-
-Three component types, each with a distinct role:
-
-| Type | Component | Description |
-|------|-----------|-------------|
-| **Global Recipe** | [`skills/financial-reporting/`](skills/financial-reporting/SKILL.md) | Base standards applied to every report — metric formats, rounding, style rules. Must be loaded first. |
-| **Sub-Skill** | [`skills/financial-reporting-weekly/`](skills/financial-reporting-weekly/SKILL.md) | Step-by-step instructions for populating the weekly performance digest. Depends on global recipe + gdrive. |
-| **Sub-Skill** | [`skills/financial-reporting-mrp/`](skills/financial-reporting-mrp/SKILL.md) | Step-by-step instructions for populating the Monthly Reporting Pack. Two-phase: coverage check then population. Depends on global recipe + gdrive + Block Data MCP. |
-| **Utility Skill** | [`skills/gdrive/`](skills/gdrive/SKILL.md) | Google Drive CLI wrapper — Docs, Sheets, Slides read/write. Required by reporting sub-skills. |
-| **Agent** | [`agents/financial-reporting-weekly.md`](agents/financial-reporting-weekly.md) | Runs the weekly report end-to-end: reads master Sheet, creates dated Doc tab, populates fact lines and tables. |
-| **Agent** | [`agents/financial-reporting-weekly-validator.md`](agents/financial-reporting-weekly-validator.md) | Validates weekly report accuracy after it's written. Field-by-field PASS/FAIL against the source Sheet. |
-| **Agent** | [`agents/financial-reporting-mrp.md`](agents/financial-reporting-mrp.md) | Runs the MRP end-to-end: coverage check vs. Block Data MCP, creates new monthly Doc, populates full P&L, brand tables, and fact lines. |
-| **Agent** | [`agents/financial-reporting-mrp-validator.md`](agents/financial-reporting-mrp-validator.md) | Validates MRP accuracy after it's written. Field-by-field PASS/FAIL across all tables, fact lines, and emojis. |
+A single command (`/weekly-summary`) that generates, publishes, and validates the weekly Block Performance Digest using Claude Code.
 
 ---
 
-## Dependency Chain
+## What It Does
+
+Every week, Block FP&A publishes a performance digest for senior management. This system automates the entire pipeline:
+
+1. **Reads the master pacing spreadsheet** — pulls every in-scope metric (gross profit by brand, AOI, Rule of 40, Cash App inflows, Commerce inflows, Square GPV) with monthly actuals, quarterly pacing, annual plan, guidance, and consensus comparisons.
+
+2. **Reads Slack for context** — finds the latest Cash App and Square weekly digests in the reporting group DM and synthesizes WoW driver commentary (no names or attribution in the output).
+
+3. **Generates the narrative** — writes a two-layer report:
+   - **Summary**: emoji-coded executive overview covering every major metric with YoY, vs. AP, vs. guidance/consensus context, and WoW change drivers.
+   - **Overview sections**: detailed plain-text commentary + formatted performance tables for each area (Gross Profit, AOI & Rule of 40, Inflows, Commerce, Square GPV).
+
+4. **Publishes to Google Docs** — creates a dated tab in the weekly digest Doc, converts the markdown to rich formatting (headings, bold, bullets, tables with black headers, pacing column shading), and applies Inter font throughout.
+
+5. **Validates the data** — compares every number in the published Doc tables cell-by-cell against the source spreadsheet. Reports PASS/FAIL with details on any mismatches.
+
+The output is a management-ready Google Doc tab and a local validation report. A few `[MANUAL]` placeholders are left for context that requires human judgment (e.g., Square WoW drivers, Proto qualitative context).
+
+---
+
+## How To Run
+
+Open Claude Code in the project directory and type:
 
 ```
-[Global Recipe] financial-reporting
-        ├── [Sub-Skill] financial-reporting-weekly
-        │       ├── depends on: financial-reporting
-        │       └── depends on: gdrive
-        │               └── [Agent] financial-reporting-weekly.md
-        │                           └── validated by: financial-reporting-weekly-validator.md
-        │
-        └── [Sub-Skill] financial-reporting-mrp
-                ├── depends on: financial-reporting
-                ├── depends on: gdrive
-                └── data source: Block Data MCP
-                        └── [Agent] financial-reporting-mrp.md
-                                    └── validated by: financial-reporting-mrp-validator.md
+/weekly-summary
+```
+
+That's it. The command handles everything end-to-end:
+- Step 1: Auth check (Google Drive + Slack)
+- Step 2: Read master pacing sheet
+- Step 3: Read Slack digests
+- Step 4: Generate the narrative + tables
+- Step 5: Save markdown file + publish to Google Doc
+- Step 6: Validate published tables against source data
+- Step 7: Report results
+
+Output files:
+- `~/Desktop/Nick's Cursor/Weekly Reporting/weekly_summary_YYYY-MM-DD.md`
+- `~/Desktop/Nick's Cursor/Weekly Reporting/validation_YYYY-MM-DD.md`
+
+### Standalone commands
+
+You can also run individual pieces:
+- `/weekly-tables` — generate just the performance tables (useful for testing)
+- `/weekly-validate` — re-run validation on an already-published tab
+
+---
+
+## What's In This Repo
+
+```
+skills/weekly-reporting/
+  ├── commands/                    Slash commands (what you type)
+  │   ├── weekly-summary.md          Full pipeline: generate + publish + validate
+  │   ├── weekly-tables.md           Standalone table generation
+  │   └── weekly-validate.md         Standalone validation
+  │
+  ├── skills/                      Reference docs (loaded as context)
+  │   ├── financial-reporting.md     Global formatting recipe (rounding, signs, etc.)
+  │   ├── weekly-summary.md          Skill definition for the summary generator
+  │   ├── weekly-tables.md           Table column mapping + cell formatting rules
+  │   └── weekly-validate.md         Validation procedure + normalization rules
+  │
+  └── gdrive/                      Google Drive CLI tool
+      ├── gdrive-cli.py              CLI for Docs, Sheets, Slides operations
+      └── scripts/
+          ├── markdown_converter.py   Converts markdown → Google Docs API requests
+          ├── auth.py                 OAuth handling
+          └── services.py             Google API service builders
 ```
 
 ---
 
-## How to Use
+## Key Data Sources
 
-**Weekly report:**
-1. Load `financial-reporting` skill (global recipe — required first)
-2. Load `financial-reporting-weekly` skill
-3. Say: _"data is ready, run the weekly report"_
-
-**Validate the weekly report:**
-After the weekly agent completes, invoke the `financial-reporting-weekly-validator` agent.
-
-**Monthly Reporting Pack (MRP):**
-1. Load `financial-reporting` skill (global recipe — required first)
-2. Load `financial-reporting-mrp` skill
-3. Say: _"data is ready, run the MRP"_
-4. Review the Phase A coverage report and confirm before Phase B population begins
-
-**Validate the MRP:**
-After the MRP agent completes Phase B, invoke the `financial-reporting-mrp-validator` agent with the new Doc ID.
+| Source | What It Provides |
+|--------|-----------------|
+| Master pacing sheet (Google Sheets) | All metric values — actuals, pacing, AP, guidance, consensus |
+| Slack group DM (C07LV8RS05A) | Cash App weekly digest + Square weekly update for WoW driver context |
 
 ---
 
-## Roadmap
+## What's Automated vs. Manual
 
-| Deliverable | Status |
-|-------------|--------|
-| Global reporting recipe | ✅ Complete |
-| Weekly report agent | ✅ Complete |
-| Weekly report validator | ✅ Complete |
-| Monthly reporting pack (MRP) agent | ✅ Complete |
-| MRP validator | ✅ Complete |
-| Board report agent | Planned |
-
----
-
-## Reference
-
-| File | Description |
-|------|-------------|
-| [`decisions/log.md`](decisions/log.md) | Append-only architecture decision log |
-| [`references/fpa-style-guide.md`](references/fpa-style-guide.md) | Block FP&A style & formatting standards |
+| Automated | Manual |
+|-----------|--------|
+| All metric extraction from the sheet | Square WoW driver context (if not posted to Slack) |
+| YoY, vs. AP, vs. guidance/consensus calculations | Proto qualitative context (deal timing, etc.) |
+| Emoji assignment (green/yellow/red) | Final review before distribution |
+| Narrative generation | |
+| Table construction + formatting | |
+| Google Doc publishing with rich formatting | |
+| Cell-by-cell data validation | |

@@ -133,7 +133,7 @@ Combine the sheet data and Slack message into a markdown file with two layers:
 1. **Summary** — comprehensive emoji-coded narrative (the main content)
 2. **Overview sections** — plain-text fact lines + performance table, NO emojis
 
-Each Overview section includes plain-text fact lines (as separate paragraphs, NOT bullets) followed by a **markdown table** with 3-row header (year/type/month) and a separator column between monthly and quarterly groups. Generate tables following `~/skills/weekly-reporting/skills/weekly-tables.md` (column mapping, row groups, cell formatting). The table data comes from the same sheet read in Step 2 — no additional API calls needed.
+Each Overview section includes bulleted fact lines with proper nesting (see template below), followed by a **markdown table** with 3-row header (year/type/month) and a separator column between monthly and quarterly groups. Metric labels in bullets must be **bold**. Generate tables following `~/skills/weekly-reporting/skills/weekly-tables.md` (column mapping, row groups, cell formatting). The table data comes from the same sheet read in Step 2 — no additional API calls needed.
 
 ### Template
 
@@ -144,30 +144,25 @@ Each Overview section includes plain-text fact lines (as separate paragraphs, NO
 
 ## Summary
 
-[emoji]**Topline:** Block gross profit is pacing to [Q1 Value — $B] in Q1 ([Q1 YoY]% YoY), [Q1 AP delta]% ([Q1 AP delta $]) [above/below] AP and [Q1 Guidance delta]% ([Q1 Guidance delta $]) [above/below] guidance. Block gross profit is pacing [Month AP delta]% ([Month AP delta $]) [above/below] AP in [Month], but [Q1 WoW $] [below/above] the previous week (Cash [Cash WoW $], Square [SQ WoW $]) due to [synthesized WoW drivers from Slack digest — no attribution] [MANUAL: and Square-specific WoW driver context]. Cash App gross profit is pacing to [Cash Month Value] in [Month] ([Cash Month YoY]% YoY), [Cash Month AP delta]% ([Cash Month AP delta $]) [above/below] AP. Square gross profit is pacing to [SQ Month Value] in [Month] ([SQ Month YoY]% YoY), [SQ Month AP delta]% ([SQ Month AP delta $]) [above/below] AP.
+[emoji]**Topline: Block gross profit** is pacing to [Q1 Value — $B] in Q1 ([Q1 YoY]% YoY), [Q1 AP delta]% ([Q1 AP delta $]) [above/below] AP and [Q1 Guidance delta]% ([Q1 Guidance delta $]) [above/below] guidance. Block gross profit is pacing [Month AP delta]% ([Month AP delta $]) [above/below] AP in [Month], but [Q1 WoW $] [below/above] the previous week (Cash [Cash WoW $], Square [SQ WoW $]) due to [synthesized WoW drivers from Slack digest — no attribution] [MANUAL: and Square-specific WoW driver context]. Cash App gross profit is pacing to [Cash Month Value] in [Month] ([Cash Month YoY]% YoY), [Cash Month AP delta]% ([Cash Month AP delta $]) [above/below] AP. Square gross profit is pacing to [SQ Month Value] in [Month] ([SQ Month YoY]% YoY), [SQ Month AP delta]% ([SQ Month AP delta $]) [above/below] AP.
 
-[emoji]**Square GPV:** In [Month], global GPV is pacing to [Value] ([Global GPV Month YoY]% YoY), [Month AP delta]% [above/below] AP. For the quarter, global GPV is pacing to [Q1 Value] ([Q1 YoY]% YoY), [Q1 AP delta]% [above/below] AP, with growth [+/-X] pts [above/below] consensus. US and International GPV are both pacing [above/below/mixed] AP in [Month], with Square gross profit pacing [SQ Month AP delta]% ([SQ Month AP delta $]) [above/below] AP in [Month] and [SQ Q1 AP delta]% ([SQ Q1 AP delta $]) [above/below] in Q1.
-[emoji]**GPV to GP Spread:** Square gross profit growth is expected to land at [SQ GP Q1 YoY]% YoY in Q1 ([pacing spread] pts below GPV growth).
-[emoji]**US GPV** is pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% [above/below] AP. For the quarter, US GPV is pacing to [Q1 Value] ([Q1 YoY]% YoY), [Q1 AP delta]% [above/below] AP.
-[emoji]**International GPV** is pacing to [Value] in [Month] ([YoY]% YoY), [AP delta]% [above/below] AP.
+- [emoji]**Square GPV:** In [Month], global GPV is pacing to [Value] ([Global GPV Month YoY]% YoY), [Month AP delta]% [above/below] AP. For the quarter, global GPV is pacing to [Q1 Value] ([Q1 YoY]% YoY), [Q1 AP delta]% [above/below] AP, with growth [+/-X] pts [above/below] consensus. US and International GPV are both pacing [above/below/mixed] AP in [Month], with gross profit expected to land [in-line with / above / below] AP in [Month] and [SQ Q1 AP delta]% ([SQ Q1 AP delta $]) [below/above] in Q1. Square gross profit growth is expected to land at [SQ GP Q1 YoY]% YoY in Q1 ([pacing spread] pts below GPV growth).
+    - [emoji]**US GPV** is pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% [above/below] AP. For the quarter, US GPV is pacing to [Q1 Value] ([Q1 YoY]% YoY), [Q1 AP delta]% [above/below] AP.
+    - [emoji]**International GPV** is pacing to [Value] in [Month] ([YoY]% YoY), [AP delta]% [above/below] AP.
+- [emoji]**Cash ex-Commerce** gross profit is pacing [AP delta]% ([AP delta $]) [above/below] AP in [Month], and [YoY]% YoY.
+    - [emoji]**Lending vs. Non-Lending (YoY):** Q1 lending gross profit growth is pacing to [Lending Q1 YoY]% YoY with non-lending growth of [Non-Lending Q1 YoY]% YoY.
+        - [emoji]**Lending (vs. AP):** Q1 lending gross profit is pacing [Q1 AP delta]% ([Q1 AP delta $]) ahead of/behind AP.
+        - [emoji]**Non-Lending (vs. AP):** Q1 non-lending gross profit is pacing [Q1 AP delta]% ([Q1 AP delta $]) ahead of/behind AP.
+    - **Inflows Framework:**
+        - [emoji]**Actives** are pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% ([AP delta count]) [below/above] AP.
+        - [emoji]**Inflows per active** are pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% [above/below] AP
+        - [emoji]**Monetization rate** is pacing to [Value] ([YoY bps] bps YoY) in [Month], [AP delta bps] bps [above/below] AP
+- [emoji]**Commerce gross profit** is pacing [AP delta]% [above/below] AP in [Month], [YoY]% YoY.
+    - [emoji]**Inflows (vs. AP)** are pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% [above/below] AP
+    - [emoji]**Monetization rate (vs. AP)** is pacing to [Value] ([YoY bps] bps YoY) in [Month], [in-line with / above / below] AP
+- [emoji]**Proto gross profit** is pacing to [Value] in [Month], [AP delta $] [above/below] AP, [Q1 context]. [MANUAL: qualitative context — e.g., timing of deal close, partnership discussions, etc.]
 
-[emoji]**Cash ex-Commerce gross profit** is pacing [AP delta]% ([AP delta $]) [above/below] AP in [Month], and [YoY]% YoY.
-[emoji]**Lending vs. Non-Lending (YoY):** Q1 lending gross profit growth is pacing to [Lending Q1 YoY]% YoY with non-lending growth of [Non-Lending Q1 YoY]% YoY.
-[emoji]**Lending (vs. AP):** Q1 lending gross profit is pacing [Q1 AP delta]% ([Q1 AP delta $]) ahead of/behind AP.
-[emoji]**Non-Lending (vs. AP):** Q1 non-lending gross profit is pacing [Q1 AP delta]% ([Q1 AP delta $]) ahead of/behind AP.
-
-**Inflows Framework:**
-[emoji]**Actives** are pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% ([AP delta count]) [below/above] AP.
-[emoji]**Inflows per active** are pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% [above/below] AP
-[emoji]**Monetization rate** is pacing to [Value] ([YoY bps] bps YoY) in [Month], [AP delta bps] bps [above/below] AP
-
-[emoji]**Commerce gross profit** is pacing [AP delta]% [above/below] AP in [Month], [YoY]% YoY.
-[emoji]**Inflows (vs. AP)** are pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% [above/below] AP
-[emoji]**Monetization rate (vs. AP)** is pacing to [Value] ([YoY bps] bps YoY) in [Month], [in-line with / above / below] AP
-
-[emoji]**Proto gross profit** is pacing to [Value] in [Month], [AP delta $] [above/below] AP, [Q1 context]. [MANUAL: qualitative context — e.g., timing of deal close, partnership discussions, etc.]
-
-[emoji]**Profitability:** Q1 Adjusted Operating Income is pacing to [AOI Q1 Value] ([margin]% margin), [Guidance delta]% ([Guidance delta $]) [above/below] guidance, and [Consensus delta]% ([Consensus delta $]) [above/below] consensus. [Synthesize WoW driver context — no attribution. E.g., "The modest decrease WoW ([WoW $]) is driven by topline softness from Cash App and Square due to..."]
+[emoji]**Profitability: Q1 Adjusted Operating Income** is pacing to [AOI Q1 Value] ([margin]% margin), [Guidance delta]% ([Guidance delta $]) [above/below] guidance, and [Consensus delta]% ([Consensus delta $]) [above/below] consensus. [Synthesize WoW driver context — no attribution. E.g., "The modest decrease WoW ([WoW $]) is driven by topline softness from Cash App and Square due to..."]
 
 ---
 
@@ -178,26 +173,21 @@ For additional details on performance for each brand, please reference the mater
 [Cash App - Weekly Performance Digest](link from Slack digest message, or placeholder)
 [Square Weekly Execution Update](placeholder — link not currently automated)
 
-**Block gross profit** is pacing to [Block Month Value — $B] in [Month] ([YoY]% YoY), [AP delta]% ([AP delta $]) [above/below] AP.
-
-- **Cash App gross profit** is pacing to [Value] in [Month] ([YoY]% YoY), [AP delta]% ([AP delta $]) [above/below] AP.
-- **Square gross profit** is pacing to [Value] in [Month] ([YoY]% YoY), [AP delta]% ([AP delta $]) [above/below] AP.
-- **Proto gross profit** is pacing to [Value] in [Month], [Q1 context: in-line with AP for the quarter / above / below].
-- **TIDAL gross profit** is pacing to [Value] ([YoY]% YoY), [AP context].
-
-[Q]'[YY] **Block gross profit** is pacing to [Q1 Value — $B] ([Q1 YoY]% YoY), [Q1 AP delta]% ([Q1 AP delta $]) [above/below] AP, [Q1 Guidance delta]% ([Q1 Guidance delta $]) [above/below] guidance, [Q1 Consensus delta]% ([Q1 Consensus delta $]) [above/below] consensus.
+- **Block gross profit** is pacing to [Block Month Value — $B] in [Month] ([YoY]% YoY), [AP delta]% ([AP delta $]) [above/below] AP.
+    - **Cash App gross profit** is pacing to [Value] in [Month] ([YoY]% YoY), [AP delta]% ([AP delta $]) [above/below] AP.
+    - **Square gross profit** is pacing to [Value] in [Month] ([YoY]% YoY), [AP delta]% ([AP delta $]) [above/below] AP.
+    - **Proto gross profit** is pacing to [Value] in [Month], [Q1 context: in-line with AP for the quarter / above / below].
+    - **TIDAL gross profit** is pacing to [Value] ([YoY]% YoY), [AP context].
+- [Q]'[YY] **Block gross profit** is pacing to [Q1 Value — $B] ([Q1 YoY]% YoY), [Q1 AP delta]% ([Q1 AP delta $]) [above/below] AP, [Q1 Guidance delta]% ([Q1 Guidance delta $]) [above/below] guidance, [Q1 Consensus delta]% ([Q1 Consensus delta $]) [above/below] consensus.
 
 [TABLE: GP Performance — Metric | Jan'26 Actual | Feb'26 Actual | Mar'26 Pacing | Q1'26 Pacing | Q1 AP | Q1 Guidance | Q1 Consensus. Row groups: Block GP, Cash App GP, Square GP, Proto GP, TIDAL GP (each: value / YoY Growth (%) / Delta vs. AP (%)). Blank row between groups. See weekly-tables SKILL.md for column mapping and cell formatting.]
 
 ## Overview: Adjusted Operating Income & Rule of 40
 
-**Adjusted Operating Income** is pacing to [AOI Month Value] ([AOI Month Margin]% margin) in [Month], [AOI Month AP delta $] [above/below] AP (GP [GP contribution $], OpEx [OpEx contribution $] favorable/unfavorable).
-
-**Rule of 40** — we expect to achieve Rule of [Month Rule of 40] in [Month] ([Month GP YoY]% growth, [Month AOI Margin]% margin), [Month Rule of 40 AP delta] pts [above/below] AP.
-
-**Adjusted Operating Income (quarterly)** is pacing to [AOI Q1 Value] ([Q1 Margin]% margin), [Guidance delta]% ([Guidance delta $]) ahead of/behind guidance, [Consensus delta]% ([Consensus delta $]) ahead of/behind consensus, and [AP delta]% ([AP delta $]) [above/below] AP.
-
-**Rule of 40 (quarterly)** — the business is expected to deliver Rule of [Q1 Rule of 40] ([Q1 GP YoY]% growth, [Q1 Margin]% margin), [Q1 Rule of 40 AP delta] pts [above/below] AP, [Q1 Rule of 40 Guidance delta] pts [above/below] guidance and consensus.
+- **Adjusted Operating Income** is pacing to [AOI Month Value] ([AOI Month Margin]% margin) in [Month], [AOI Month AP delta $] [above/below] AP (GP [GP contribution $], OpEx [OpEx contribution $] favorable/unfavorable).
+    - We expect to achieve **Rule of [Month Rule of 40]** in [Month] ([Month GP YoY]% growth, [Month AOI Margin]% margin), [Month Rule of 40 AP delta] pts [above/below] AP.
+- For the quarter, **Adjusted Operating Income** is pacing to [AOI Q1 Value] ([Q1 Margin]% margin), [Guidance delta]% ([Guidance delta $]) ahead of/behind guidance, [Consensus delta]% ([Consensus delta $]) ahead of/behind consensus, and [AP delta]% ([AP delta $]) [above/below] AP.
+    - For the quarter, the business is expected to deliver **Rule of [Q1 Rule of 40]** ([Q1 GP YoY]% growth, [Q1 Margin]% margin), [Q1 Rule of 40 AP delta] pts [above/below] AP, [Q1 Rule of 40 Guidance delta] pts [above/below] guidance and consensus.
 
 [TABLE: AOI & Rule of 40 — same columns as GP Performance. Row groups: Gross profit (value / YoY% / Delta%), AOI (value / Margin% / Delta%), Rule of 40 (value / Delta pts). See weekly-tables SKILL.md.]
 
@@ -205,31 +195,26 @@ For additional details on performance for each brand, please reference the mater
 
 ### Cash App (Ex Commerce)
 
-**Actives** are pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% ([AP delta count]) [below/above] AP
-
-**Inflows per active** are pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% [above/below] AP
-
-**Monetization rate** is pacing to [Value] ([YoY bps] bps YoY) in [Month], [AP delta bps] bps [above/below] AP
+- **Actives** are pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% ([AP delta count]) [below/above] AP
+- **Inflows per active** are pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% [above/below] AP
+- **Monetization rate** is pacing to [Value] ([YoY bps] bps YoY) in [Month], [AP delta bps] bps [above/below] AP
 
 [TABLE: Cash App Inflows — Metric | Jan'26 Actual | Feb'26 Actual | Mar'26 Pacing | Q1'26 Pacing | Q1 AP | Q1 Consensus. Row groups: Actives, Inflows per Active, Monetization rate (each: value / YoY% / Delta%). See weekly-tables SKILL.md.]
 
 ### Commerce
 
-**Inflows** are pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% [above/below] AP
-
-**Monetization rate** is pacing to [Value] ([YoY bps] bps YoY) in [Month], [in-line with / above / below] AP
+- **Inflows** are pacing to [Value] ([YoY]% YoY) in [Month], [AP delta]% [above/below] AP
+- **Monetization rate** is pacing to [Value] ([YoY bps] bps YoY) in [Month], [in-line with / above / below] AP
 
 [TABLE: Commerce — Metric | Jan'26 Actual | Feb'26 Actual | Mar'26 Pacing | Q1'26 Pacing | Q1 AP. Row groups: Inflows, Monetization rate (each: value / YoY% / Delta%). See weekly-tables SKILL.md.]
 
 ## Overview: Square GPV
 
-**Global GPV** is pacing to [Value] in [Month] ([YoY]% YoY), [AP delta]% [above/below] AP
-
-- **US GPV** is pacing to [Value] in [Month] ([YoY]% YoY), [AP delta]% [above/below] AP
-- **International GPV** is pacing to [Value] in [Month] ([YoY]% YoY), [AP delta]% [above/below] AP
-
-**Global GPV** is pacing to [Q1 Value] ([Q1 YoY]% YoY), [Q1 AP delta]% [above/below] AP
-**GPV to GP Spread** — Pacing [pacing spread] pts vs. consensus [consensus spread] pts
+- **Global GPV** is pacing to [Value] in [Month] ([YoY]% YoY), [AP delta]% [above/below] AP
+    - **US GPV** is pacing to [Value] in [Month] ([YoY]% YoY), [AP delta]% [above/below] AP
+    - **International GPV** is pacing to [Value] in [Month] ([YoY]% YoY), [AP delta]% [above/below] AP
+- For the quarter, **Global GPV** is pacing to [Q1 Value] ([Q1 YoY]% YoY), [Q1 AP delta]% [above/below] AP
+    - **GPV to GP Spread:** Pacing [pacing spread] pts vs. consensus [consensus spread] pts
 
 [TABLE: Square GPV — Metric | Jan'26 Actual | Feb'26 Actual | Mar'26 Pacing | Q1'26 Pacing | Q1 AP | Q1 Consensus. Row groups: Global GPV, US GPV, International GPV (each: value / YoY% / Delta%). See weekly-tables SKILL.md.]
 ```
@@ -253,9 +238,9 @@ For additional details on performance for each brand, please reference the mater
 ### Writing style
 
 - Professional tone suitable for senior management — no analyst attribution, no Slack usernames
-- **Summary section**: emojis on every metric line. Flowing paragraphs, not bullet points. Each topic starts with [emoji]**Bold label:**
+- **Summary section**: emojis on every metric line. **Topline** and **Profitability** are standalone paragraphs; all other metrics are bulleted (Square GPV → US/INTL sub-bullets; Cash ex-Commerce → Lending/Inflows sub-bullets with further nesting; Commerce → Inflows/Mon rate sub-bullets; Proto as level 0). Each topic starts with [emoji]**Bold label:**
 - **"Inflows Framework:"** is a plain-text label with no emoji — the metrics underneath each have their own emoji
-- **Overview sections**: NO emojis. Plain narrative text for reference detail.
+- **Overview sections**: NO emojis. Bulleted fact lines with bold metric labels, nested where applicable. Metric labels only are bold (not "is pacing to..." etc.).
 - WoW drivers should be synthesized from the Slack digest content without quoting or naming the source
 - Keep Summary lines tight — one to three sentences per topic
 - [MANUAL] items should clearly describe what content is expected so Nick can fill them efficiently
@@ -322,6 +307,81 @@ cat "FILEPATH_FROM_STEP_5" | (cd ~/skills/gdrive && uv run gdrive-cli.py docs in
 ```
 
 Use the file path from Step 5 and the tab ID from 5.5c. Verify the response shows `"status": "ok"`.
+
+### 5.5e — Fix bullet nesting
+
+The markdown converter renders all bullets flat (level 0) and some intended-bullets as paragraphs. Fix nesting in both the **Summary** and **Overview** sections.
+
+1. Get paragraph indices from `docs get` (include all tabs)
+2. Identify each bullet section by scanning paragraph text for known labels
+3. `deleteParagraphBullets` on each section range
+4. `insertText` a `\t` (level 1) or `\t\t` (level 2) at the start of each sub-item paragraph (process in **reverse index order**):
+
+**Summary sub-items:**
+- Level 1 (`\t`): US GPV, International GPV, Lending vs. Non-Lending, Inflows Framework, Inflows (vs. AP), Monetization rate (vs. AP)
+- Level 2 (`\t\t`): Lending (vs. AP), Non-Lending (vs. AP), Actives, Inflows per active, Monetization rate
+
+**Overview GP sub-items (level 1):** Cash App GP, Square GP, Proto GP, TIDAL GP
+
+**Overview AOI sub-items (level 1):** monthly Rule of 40, quarterly Rule of 40
+
+**Overview Square GPV sub-items (level 1):** US GPV, International GPV, GPV to GP Spread
+
+5. `createParagraphBullets` with `BULLET_DISC_CIRCLE_SQUARE` preset on each section range
+6. Include `tabId` in every range/location object
+
+### 5.5f — Fix table spacing
+
+The markdown converter places the last bullet immediately before each table, causing table header rows to inherit bullet styling. Insert a blank non-bullet paragraph between the last bullet and each table:
+
+1. For each of the 5 tables, find the last bulleted paragraph before the table
+2. `insertText` `\n` at the end of that paragraph (at position `end - 1`, inside the existing `\n`)
+3. `deleteParagraphBullets` on the new blank paragraph
+
+Process in **reverse index order** so earlier positions aren't affected.
+
+### 5.5g — Bold metric labels in overview commentary
+
+Apply `bold: true` via `updateTextStyle` to each metric label in the Overview bullet lines. Bold only the metric name — not "is pacing to..." or other surrounding text.
+
+Labels to bold: Block gross profit, Cash App gross profit, Square gross profit, Proto gross profit, TIDAL gross profit, Adjusted Operating Income, Rule of 40/46/49, Actives, Inflows per active, Monetization rate, Inflows, Global GPV, US GPV, International GPV, GPV to GP Spread:
+
+Also bold **Global GPV** in the quarterly GPV line ("For the quarter, **Global GPV** is pacing...") — capitalize the G.
+
+### 5.5h — Apply conditional formatting
+
+After all structural fixes, apply text colors via `updateTextStyle` batch updates.
+
+**1. Yellow highlight on manual/missing placeholders:**
+
+Find all text ranges containing `[MANUAL` or `[DATA MISSING` in the doc. For each match, apply:
+```json
+{"updateTextStyle": {"textStyle": {"backgroundColor": {"color": {"rgbColor": {"red": 1.0, "green": 0.95, "blue": 0.0}}}}, "fields": "backgroundColor", "range": {"startIndex": START, "endIndex": END, "tabId": "TAB_ID"}}}
+```
+
+**2. Green/red text on Delta vs. AP values in tables:**
+
+For each "Delta vs. AP (%)" and "Delta vs. AP (pts)" row in the doc tables, parse each data cell value:
+- **Positive value** (e.g., `+3.3%`, `+$93M`, `+4 bps`) → green text `{"rgbColor": {"red": 0.0, "green": 0.48, "blue": 0.2}}` (#007A33)
+- **Negative value** (e.g., `(1.6%)`, `($4.8M)`, `(5 bps)`) → red text `{"rgbColor": {"red": 0.8, "green": 0.0, "blue": 0.0}}` (#CC0000)
+- **Zero or `--`** → no color change (leave black)
+
+Apply via:
+```json
+{"updateTextStyle": {"textStyle": {"foregroundColor": {"color": {"rgbColor": COLOR}}}, "fields": "foregroundColor", "range": {"startIndex": START, "endIndex": END, "tabId": "TAB_ID"}}}
+```
+
+No inversion needed — OpEx is not present in the weekly tables.
+
+### 5.5i — Verify missing lines
+
+The markdown converter sometimes drops lines adjacent to tables (they become blank bullet paragraphs). After all other fixes, scan for blank bullet paragraphs immediately before tables. If found, check the markdown source for the expected text and insert it. Known lines that get dropped:
+- Q1 Block GP line (before GP table)
+- Quarterly Rule of 40 line (before AOI table)
+- Monetization rate lines (before Inflows tables)
+- GPV to GP Spread line (before Square GPV table)
+
+Insert the text, apply bold to the metric label, and fix bullet nesting as needed.
 
 ### Error handling
 

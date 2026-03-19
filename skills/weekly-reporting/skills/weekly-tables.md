@@ -232,6 +232,22 @@ Row groups: Inflows (3 rows), Monetization rate (3 rows).
 
 ---
 
+## Step 6b — Conditional color rules (applied post-insertion in Google Doc)
+
+These rules are applied by the weekly-summary publishing pipeline (Step 5.5h) after table markdown is inserted into the Doc. They do not affect the markdown output itself.
+
+**Delta vs. AP rows** — "Delta vs. AP (%)" and "Delta vs. AP (pts)" row cells get colored text:
+
+| Cell Value | Text Color | Hex |
+|---|---|---|
+| Positive (`+3.3%`, `+$93M`, `+4 bps`) | Green | `#007A33` |
+| Negative (`(1.6%)`, `($4.8M)`, `(5 bps)`) | Red | `#CC0000` |
+| Zero or `--` | Black (no change) | — |
+
+No inversion needed — OpEx is not present in the weekly tables.
+
+---
+
 ## Step 7 — Output
 
 **Standalone mode** (`/weekly-tables`): Write all 5 tables to a single file:

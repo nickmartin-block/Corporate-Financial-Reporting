@@ -8,7 +8,7 @@ allowed-tools:
   - Edit
 metadata:
   author: nmart
-  version: "1.0"
+  version: "1.1"
   status: active
 ---
 
@@ -65,6 +65,38 @@ cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTA
 
 **Comparison point:** Q1 → AP (columns 4-5). For Q2 use Q2OL, Q3 use Q3OL, Q4 use Q4OL per the financial-reporting recipe.
 
+### QTD column mapping (columns T through Y — quarter-end only)
+
+| Index | Content |
+|---|---|
+| 8 | Actual |
+| 9 | vs. Q1OL $ |
+| 10 | vs. Q1OL % |
+| 11 | vs. AP $ |
+| 12 | vs. AP % |
+| 13 | YoY % |
+
+Mirrors monthly columns (1–6) without a prior-period YoY column. Same comparison point rules apply (Q1 → AP, Q2 → Q2OL, etc.).
+
+**Point-in-time metrics:** Cash App Actives, Inflows per Active, and Monetization Rate do not have QTD values (they are monthly rate/count metrics). In quarterly mode, use the monthly column values for these and reference the month name (e.g., "landed at 56.9M in March").
+
+### Quarter-end detection
+
+After reading the sheet header (row 0, index 1 — e.g., "Mar'26"), determine the report month. If the month is **March, June, September, or December**, use **quarterly mode**. Otherwise, use **monthly mode**.
+
+| Report Month | Quarter | Mode | Data Columns |
+|---|---|---|---|
+| Jan, Feb | Q1 | Monthly | 1–7 |
+| **Mar** | Q1 | **Quarterly** | 8–13 |
+| Apr, May | Q2 | Monthly | 1–7 |
+| **Jun** | Q2 | **Quarterly** | 8–13 |
+| Jul, Aug | Q3 | Monthly | 1–7 |
+| **Sep** | Q3 | **Quarterly** | 8–13 |
+| Oct, Nov | Q4 | Monthly | 1–7 |
+| **Dec** | Q4 | **Quarterly** | 8–13 |
+
+Confirm to the user: "This is a quarter-end month — generating **Q[N] [Year]** flash." or "Intra-quarter month — generating **[Month] [Year]** flash."
+
 ### Row mapping (0-indexed from values array)
 
 **Main Summary (rows 2–27):**
@@ -115,11 +147,14 @@ cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTA
 
 ---
 
-## Step 3 — Generate the monthly flash
+## Step 3 — Generate the flash
 
-Determine month and year from the sheet header (row 0, index 1 — e.g., "Feb'26"). Prior month = one month back.
+Determine month and year from the sheet header (row 0, index 1 — e.g., "Feb'26"). Apply quarter-end detection from Step 2 to select the correct mode and template.
 
-### Narrative structure
+- **Monthly mode:** Prior month = one month back. Use monthly columns (1–7). Include prior-month YoY comparisons.
+- **Quarterly mode:** Derive quarter label (Q1–Q4). Use QTD columns (8–13). No prior-period YoY comparisons. Point-in-time metrics (Actives, Inflows/Active, Monetization Rate) use monthly columns with month reference.
+
+### Monthly narrative structure (intra-quarter months)
 
 Generate markdown following this exact structure. Every **bold label** below must be bold in the output. Apply all formatting from the financial-reporting recipe.
 
@@ -160,6 +195,47 @@ Generate markdown following this exact structure. Every **bold label** below mus
 **[Month] Rule of 40** was [Actual], [vs AP] pts above AP and [YoY] pts YoY ([Jan YoY] pts in [Prior Month]).
 ```
 
+### Quarterly narrative structure (quarter-end months only)
+
+Use this template when quarterly mode is active. Key differences from monthly: title/headers anchor to the quarter, data pulls from QTD columns (8–13), no prior-period YoY comparisons, and point-in-time metrics reference the month.
+
+```
+# Block Topline Flash: Q[N] [Full Year]
+
+*This flash report provides a preliminary view of quarter-end close results, with figures subject to further review and potential adjustment. This streamlined report includes minimal commentary, as a more comprehensive analysis of underlying drivers will be provided in the* ***Monthly Management Reporting Pack scheduled for [MRP DATE]***.
+
+*Please note that the flash topline aligns with our externally reported guidelines, which include Cash App Pay Gross Profit within Cash App excluding Commerce. All comparisons reference [Year] Annual Plan unless otherwise noted. Variances in charts are not color coded for amounts within +/- 1%, $0.5M, or YoY comparisons.*
+
+## Q[N] Summary
+
+**Block gross profit** was [QTD Actual] in Q[N], growing [QTD YoY]% YoY and landing [QTD vs AP $] ([QTD vs AP %]%) vs. AP ([CA contribution] from Cash App, [SQ contribution] from Square, and [Other contribution] from Other Brands).
+
+- **Cash App** gross profit for Q[N] was [QTD Actual], growing [QTD YoY]% YoY and landing [QTD vs AP $] or [QTD vs AP %]% above AP. Outperformance vs. AP: [positive sub-products sorted by $ desc], partially offset by [negative sub-products].
+    - **Cash App ex. Commerce gross profit** was [QTD Actual], [QTD vs AP $] ([QTD vs AP %]%) vs. AP and [QTD YoY]% YoY.
+    - **Cash App Actives** landed at [Monthly Actual] in [Month], growing [Monthly YoY]% YoY.
+    - **Cash App Inflows per Active** were [Monthly Actual] in [Month], [Monthly vs AP $] ([Monthly vs AP %]%) vs. AP and [Monthly YoY]% YoY.
+    - **Cash App Monetization Rate (ex. Commerce)** was [Monthly Actual] in [Month], [Monthly vs AP] pts vs. AP.
+    - **Commerce GMV** was [QTD Actual], [QTD vs AP $] ([QTD vs AP %]%) vs. AP and [QTD YoY]% YoY.
+- **Square** gross profit for Q[N] was [QTD Actual], growing [QTD YoY]% YoY and landing [QTD vs AP $] or [QTD vs AP %]% above AP. Outperformance vs. AP: [positive sub-products sorted by $ desc], partially offset by [negative sub-products].
+    - **Global GPV** was [QTD Actual], [QTD vs AP $] ([QTD vs AP %]%) vs. AP and [QTD YoY]% YoY.
+    - **US GPV** was [QTD Actual], [QTD vs AP $] ([QTD vs AP %]%) vs. AP and [QTD YoY]% YoY.
+    - **INTL GPV** was [QTD Actual], [QTD vs AP $] ([QTD vs AP %]%) vs. AP and [QTD YoY]% YoY. On a constant-currency basis, **INTL GPV** was [CC QTD Actual], [CC QTD vs AP $] ([CC QTD vs AP %]%) vs. AP and [CC QTD YoY]% YoY.
+- **TIDAL** gross profit for Q[N] was [QTD Actual], [QTD YoY]% YoY and landed [QTD vs AP $] or [QTD vs AP %]% vs. AP.
+- **Proto** gross profit for Q[N] was [QTD Actual], and landed [QTD vs AP $] vs. AP.
+
+**Variable Profit** landed at [QTD Actual] in Q[N], [QTD vs AP $] ([QTD vs AP %]%) vs. AP and [QTD YoY]% YoY.
+
+**Adjusted Opex** for Q[N] was [QTD Actual], [QTD vs AP $] ([QTD vs AP %]%) below AP and [QTD YoY]% YoY.
+
+- **Variable costs** were [QTD Actual] ([QTD YoY]% YoY), [QTD vs AP $] ([QTD vs AP %]%) below AP.
+- **Acquisition costs** were [QTD Actual] ([QTD YoY]% YoY), [QTD vs AP $] ([QTD vs AP %]%) above AP.
+- **Fixed costs** were [QTD Actual] ([QTD YoY]% YoY), [QTD vs AP $] ([QTD vs AP %]%) above AP.
+
+**Adjusted Operating Income** landed at [QTD Actual] in Q[N], [QTD vs AP $] ([QTD vs AP %]%) vs. AP and [QTD YoY]% YoY.
+
+**Q[N] Rule of 40** was [QTD Actual], [QTD vs AP] pts above AP and [QTD YoY] pts YoY.
+```
+
 ### Value formatting rules
 
 - Use source values from the sheet as-is for dollar amounts and percentages
@@ -171,11 +247,11 @@ Generate markdown following this exact structure. Every **bold label** below mus
 
 ### Sub-product outperformance lines
 
-For Cash App and Square, list sub-products by AP $ delta descending (positive first, then "partially offset by" negatives). Omit sub-products with zero or negligible delta.
+For Cash App and Square, list sub-products by AP $ delta descending (positive first, then "partially offset by" negatives). Omit sub-products with zero or negligible delta. In quarterly mode, use QTD vs AP $ (column 11) for deltas.
 
 ### Other Brands bridge
 
-Other Brands contribution = TIDAL vs AP $ + Proto vs AP $.
+Other Brands contribution = TIDAL vs AP $ + Proto vs AP $. In quarterly mode, use QTD vs AP $ (column 11).
 
 ---
 
@@ -227,9 +303,9 @@ Process deletions in reverse index order to preserve earlier indices.
 ### 5e — Verify
 
 Read back the doc structure and confirm:
-- H1: "Block Topline Flash: [Month] [Year]"
+- H1: "Block Topline Flash: [Month] [Year]" (monthly) or "Block Topline Flash: Q[N] [Year]" (quarterly)
 - Italic disclaimer paragraphs (first with bold MRP reference)
-- H2: "[Month] Summary"
+- H2: "[Month] Summary" (monthly) or "Q[N] Summary" (quarterly)
 - Bullet nesting: Cash App/Square at level 0, sub-items at level 1
 - All metric labels bold
 
@@ -250,6 +326,7 @@ Execute Steps 1–7 from the validation skill. The validation will independently
 ## Step 7 — Report back
 
 Tell Nick:
+- **Mode:** Monthly ([Month] [Year]) or Quarterly (Q[N] [Year])
 - **File:** path to the saved .md
 - **Doc:** link to the Google Doc with tab
 - **Validation:** PASS or FAIL (N values compared, N failures). Include failure details if any.

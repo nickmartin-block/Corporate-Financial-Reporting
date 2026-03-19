@@ -10,14 +10,17 @@ Each month after close, Block FP&A publishes a topline flash email with prelimin
 
 1. **Reads the MRP Charts & Tables sheet** — pulls every in-scope metric from a single range (`L11:Y90`): gross profit by brand and sub-product, volume metrics (GPV, GMV, Actives, Inflows), Variable Profit, Adjusted OpEx breakdown (V/A/F), Adjusted Operating Income, and Rule of 40.
 
-2. **Generates the narrative** — writes a structured flash report with:
-   - **Title block**: "Block Topline Flash: [Month] [Year]" with a disclaimer noting preliminary figures and a `[MRP DATE]` placeholder for the Monthly Management Reporting Pack date.
+2. **Detects monthly vs. quarterly mode** — at quarter-end months (March, June, September, December), the command automatically switches to quarterly mode. The narrative anchors to the full quarter (e.g., "Q1 2026") using QTD columns (T–Y) instead of monthly columns (M–S). Intra-quarter months use the standard monthly template.
+
+3. **Generates the narrative** — writes a structured flash report with:
+   - **Title block**: "Block Topline Flash: [Month] [Year]" (monthly) or "Block Topline Flash: Q[N] [Year]" (quarterly), with a disclaimer noting preliminary figures and a `[MRP DATE]` placeholder.
    - **Summary section**: Block GP headline with brand bridge, followed by Cash App (6 sub-products + ex-Commerce detail + Actives + Inflows + Monetization Rate + Commerce GMV), Square (5 sub-products + Global/US/INTL GPV with constant-currency), TIDAL, Proto, Variable Profit, Adjusted OpEx with V/A/F breakdown, Adjusted OI, and Rule of 40.
-   - Every metric includes: Actual, vs. AP delta ($ and %), YoY %, and prior month YoY % where available.
+   - **Monthly mode**: every metric includes Actual, vs. AP delta ($ and %), YoY %, and prior month YoY % where available.
+   - **Quarterly mode**: every metric includes QTD Actual, vs. AP delta ($ and %), and YoY %. No prior-period comparisons. Point-in-time metrics (Actives, Inflows per Active, Monetization Rate) use the month-end figure with the month name.
 
-3. **Publishes to Google Docs** — clears the target tab, inserts the markdown with rich formatting (headings, bold metric labels, nested bullet lists), and applies post-insertion fixes for bullet nesting and italic/bold disclaimer text.
+4. **Publishes to Google Docs** — clears the target tab, inserts the markdown with rich formatting (headings, bold metric labels, nested bullet lists), and applies post-insertion fixes for bullet nesting and italic/bold disclaimer text.
 
-4. **Validates the data** — compares every metric value in the published Doc against the source spreadsheet. Checks Actuals, vs. AP deltas, YoY rates, sub-product deltas, and brand bridge contributions. Reports PASS/FAIL with details on any mismatches.
+5. **Validates the data** — compares every metric value in the published Doc against the source spreadsheet. Checks Actuals, vs. AP deltas, YoY rates, sub-product deltas, and brand bridge contributions. Reports PASS/FAIL with details on any mismatches.
 
 The output is a management-ready Google Doc tab, a local markdown file, and a validation report. One `[MRP DATE]` placeholder is left for the Monthly Management Reporting Pack date, which varies each month.
 
@@ -33,12 +36,12 @@ Open Claude Code in the project directory and type:
 
 That's it. The command handles everything end-to-end:
 - Step 1: Auth check (Google Drive)
-- Step 2: Read MRP Charts & Tables sheet
-- Step 3: Generate the flash narrative
+- Step 2: Read MRP Charts & Tables sheet + detect monthly vs. quarterly mode
+- Step 3: Generate the flash narrative (monthly or quarterly template)
 - Step 4: Save markdown file
 - Step 5: Publish to Google Doc (with formatting fixes)
 - Step 6: Validate every metric against the source sheet
-- Step 7: Report results
+- Step 7: Report results (including which mode was used)
 
 Output files:
 - `~/Desktop/Nick's Cursor/Monthly Reporting/monthly_flash_YYYY_MM.md`
@@ -48,6 +51,24 @@ Output files:
 
 You can also run validation independently:
 - `/monthly-validate` — re-run validation on an already-published Doc (useful after manual edits)
+
+---
+
+## Quarter-End Mode
+
+The command auto-detects quarter-end months from the sheet header:
+
+| Report Month | Mode | Data Source |
+|---|---|---|
+| Jan, Feb, Apr, May, Jul, Aug, Oct, Nov | Monthly | Columns M–S (indices 1–7) |
+| Mar, Jun, Sep, Dec | Quarterly | Columns T–Y (indices 8–13) |
+
+Key differences in quarterly mode:
+- Title: "Block Topline Flash: Q1 2026" instead of "Block Topline Flash: March 2026"
+- Section header: "Q1 Summary" instead of "March Summary"
+- All comparisons use QTD figures from the quarter columns
+- No prior-period YoY comparisons (the "X% in January" pattern is monthly-only)
+- Point-in-time metrics (Cash App Actives, Inflows per Active, Monetization Rate) fall back to the monthly column and reference the month name
 
 ---
 
@@ -71,7 +92,7 @@ The monthly flash reuses the same `gdrive-cli.py` tool from `skills/weekly-repor
 
 | Source | What It Provides |
 |--------|-----------------|
-| MRP Charts & Tables sheet (`L11:Y90`) | All metric values — actuals, vs. AP, vs. Q1OL, YoY %, Jan YoY % |
+| MRP Charts & Tables sheet (`L11:Y90`) | All metric values — actuals, vs. AP, vs. Q1OL, YoY %, Jan YoY % (monthly columns M–S), plus QTD equivalents (columns T–Y) |
 
 ### Metrics Covered (21 metrics, 106 validated values)
 
@@ -102,8 +123,9 @@ The flash compares to **Annual Plan (AP)** for Q1. For subsequent quarters, the 
 | Automated | Manual |
 |-----------|--------|
 | All metric extraction from the sheet | `[MRP DATE]` — Monthly Reporting Pack date |
-| Narrative generation with formatting rules | Final review before distribution |
-| Brand bridge calculation (Cash App + Square + Other Brands) | Qualitative commentary (future enhancement) |
+| Monthly vs. quarterly mode detection | Final review before distribution |
+| Narrative generation with formatting rules | Qualitative commentary (future enhancement) |
+| Brand bridge calculation (Cash App + Square + Other Brands) | |
 | Sub-product outperformance sorting | |
 | Google Doc publishing with bullet nesting + italic/bold | |
 | Cell-by-cell data validation (106 values) | |

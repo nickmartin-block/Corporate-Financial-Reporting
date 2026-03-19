@@ -237,80 +237,12 @@ Read back the doc structure and confirm:
 
 ## Step 6 — Validate
 
-### 6a — Read sources
+Run the standalone validation skill. Read and follow all instructions in `~/skills/monthly-reporting/commands/monthly-validate.md`.
 
-Re-use sheet data from Step 2 if still in context. Read the doc text:
-
-```bash
-cd ~/skills/gdrive && uv run gdrive-cli.py read DOC_ID --tab TAB_ID
-```
-
-### 6b — Build ground truth
-
-For every metric in the row mapping, extract from the sheet:
-- Actual (index 1)
-- vs AP $ (index 4)
-- vs AP % (index 5)
-- YoY % (index 6)
-- Jan YoY % (index 7)
-
-Skip rows with `#REF!`, `#DIV/0!`, or empty values. Normalize all values:
-- Strip `$`, `M`, `B`, `K`, `%`, `(`, `)`, `+`, `-`, spaces, commas
-- Parentheses → negative
-- $B → multiply by 1000 (to $M)
-- Store as raw float
-
-### 6c — Compare against doc
-
-For each metric in the ground truth, search the doc text for the metric's bold label. Then verify each value type appears in the same paragraph:
-
-| Value Type | What to check |
-|---|---|
-| Actual | The dollar amount or percentage immediately after the metric label |
-| vs AP $ | Dollar amount near "vs. AP" or "above/below AP" |
-| vs AP % | Percentage near "vs. AP" or "above/below AP" |
-| YoY % | Percentage near "YoY" |
-| Jan YoY % | Percentage in parentheses near "in [Prior Month]" |
-
-**Normalization:** Strip both doc and sheet values to raw numbers using the same rules as 6b.
-
-**Rounding tolerance:**
-- Percentages (no decimal): ±0.5 pp
-- Percentages (1 decimal): ±0.05 pp
-- Dollar values in $B (2 decimals): ±$5M
-- Dollar values in $M (no decimal): ±$0.5M
-- Dollar values in $M (1 decimal): ±$0.05M
-- Points: ±0.5 pts
-
-**PASS** if within tolerance. **FAIL** if outside tolerance or value not found.
-
-### 6d — Special cases
-
-- **Rule of 40:** values are in % and pts, not dollars
-- **Monetization Rate:** value is a percentage (1.68%), delta is in pts
-- **Actives:** value is in M (56.9M), delta is in M
-- **Proto/Hardware:** may have negative actuals — verify sign matches
-- **"n/a" YoY:** skip YoY comparison for that metric
-
-### 6e — Output report
-
-Save to `~/Desktop/Nick's Cursor/Monthly Reporting/validation_YYYY_MM.md`:
+Execute Steps 1–7 from the validation skill. The validation will independently re-read the source sheet and the published Doc, compare every metric value, and save a validation report to:
 
 ```
-# Monthly Flash Validation — [Month] [Year]
-
-## Result: PASS / FAIL
-
-- Metrics validated: [N]
-- Values compared: [N]
-- ✅ Passed: [N]
-- ❌ Failed: [N]
-
-## Failures
-
-[List every failure: ❌ | [Metric] | [Value Type] | Doc: [value] | Sheet: [value]]
-
-(If zero failures: "No mismatches found.")
+~/Desktop/Nick's Cursor/Monthly Reporting/validation_YYYY_MM.md
 ```
 
 ---

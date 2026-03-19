@@ -44,6 +44,11 @@ Output files:
 - `~/Desktop/Nick's Cursor/Monthly Reporting/monthly_flash_YYYY_MM.md`
 - `~/Desktop/Nick's Cursor/Monthly Reporting/validation_YYYY_MM.md`
 
+### Standalone commands
+
+You can also run validation independently:
+- `/monthly-validate` — re-run validation on an already-published Doc (useful after manual edits)
+
 ---
 
 ## What's In This Directory
@@ -51,7 +56,8 @@ Output files:
 ```
 skills/monthly-flash/
   ├── commands/                    Slash commands (what you type)
-  │   └── monthly-flash.md          Full pipeline: generate + publish + validate
+  │   ├── monthly-flash.md          Full pipeline: generate + publish + validate
+  │   └── monthly-validate.md       Standalone validation (re-check without regenerating)
   │
   └── skills/                      Reference docs (loaded as context)
       └── financial-reporting.md     Global formatting recipe (rounding, signs, etc.)

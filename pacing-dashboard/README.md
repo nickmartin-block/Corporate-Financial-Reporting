@@ -2,7 +2,7 @@
 
 Live 2-page business performance dashboard tracking current quarter pacing vs. consensus and forward-looking quarterly forecasts. Deployed to Block Cell for executive access.
 
-**Production URL:** https://blockcell.sqprod.co/sites/nmart-pacing-dashboard/
+**Production URL:** Hosted on Block Cell. Contact nmart for the URL.
 
 ## Overview
 
@@ -86,7 +86,7 @@ This takes ~30 seconds:
 
 After refreshing data, tell Goose to redeploy:
 
-> Deploy the contents of ~/Desktop/Nick's Cursor/Pacing Dashboard/ as a Block Cell site. Deploy `dashboard.html` and `dashboard_data.js` together to the existing site `nmart-pacing-dashboard`.
+> Deploy the contents of the Pacing Dashboard folder as a Block Cell site. Deploy `dashboard.html` and `dashboard_data.js` together to the existing Block Cell site.
 
 ### Design changes (layout, columns, styling)
 

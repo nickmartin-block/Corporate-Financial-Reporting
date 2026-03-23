@@ -430,16 +430,16 @@
     </div>
 
     <div class="forward-table-group">
-      <h4>Adjusted Operating Income</h4>
+      <h4>GP Net of Risk Loss</h4>
       <div class="data-table-wrapper">
-        <table class="data-table" id="fwd-aoi"></table>
+        <table class="data-table" id="fwd-gp-risk"></table>
       </div>
     </div>
 
     <div class="forward-table-group">
-      <h4>GP Net of Risk Loss</h4>
+      <h4>Adjusted Operating Income</h4>
       <div class="data-table-wrapper">
-        <table class="data-table" id="fwd-gp-risk"></table>
+        <table class="data-table" id="fwd-aoi"></table>
       </div>
     </div>
 
@@ -497,7 +497,7 @@
             ${card.secondary ? `<span class="secondary">${card.secondary}</span>` : ''}
             <span class="badge ${signalClass(card.signal)}">${card.badge}</span>
           </div>
-          <div class="wow">${card.wow ? '&#8593;' + card.wow + ' WoW' : ''}</div>
+          <div class="wow">${card.wow ? (card.wow.toString().startsWith('-') || card.wow.toString().startsWith('(') ? '&#8595;' : '&#8593;') + card.wow + ' WoW' : ''}</div>
         </div>
       `).join('');
     }

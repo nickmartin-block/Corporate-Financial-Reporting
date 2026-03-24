@@ -30,6 +30,7 @@ from datetime import datetime
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DASHBOARD_DATA_PATH = os.path.join(SCRIPT_DIR, "dashboard_data.js")
 PRIOR_DATA_PATH = os.path.join(SCRIPT_DIR, ".dashboard_data_prior.js")
+REPORT_PATH = "/tmp/validation_report.json"
 
 # Snowflake connection
 SF_ACCOUNT = os.environ.get("SNOWFLAKE_ACCOUNT", "squareinc-square")
@@ -145,6 +146,25 @@ class ValidationResult:
 
     def all_pass(self):
         return self.fails() == 0
+
+    def write_report(self):
+        """Write JSON report for downstream consumers (e.g., Slack alerts)."""
+        report = {
+            "status": "PASS" if self.all_pass() else "FAIL",
+            "passes": self.passes(),
+            "fails": self.fails(),
+            "warns": self.warns(),
+            "skips": self.skips(),
+            "failures": [
+                f"{name}: {detail}" for _, name, status, detail in self.checks if status == "FAIL"
+            ],
+            "warnings": [
+                f"{name}: {detail}" for _, name, status, detail in self.checks if status == "WARN"
+            ],
+            "generated_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+        with open(REPORT_PATH, "w") as f:
+            json.dump(report, f, indent=2)
 
     def print_report(self):
         current_cat = None
@@ -602,6 +622,7 @@ def main():
 
     # Print report
     results.print_report()
+    results.write_report()
 
     # Save current data as prior for next run
     import shutil

@@ -196,17 +196,50 @@ cd ~/Desktop/Nick's\ Cursor/Pacing\ Dashboard && python3 refresh.py
 
 Copy `dashboard.html` → `index.html` so Block Cell serves the page correctly (Block Cell does not auto-resolve `/` to `/index.html`).
 
-## Step 11: Deploy to Block Cell
+## Step 11: Validate
+
+Run the validation suite:
+```bash
+cd ~/Desktop/Nick's\ Cursor/Pacing\ Dashboard && uv run validate.py --quick
+```
+
+Use `--quick` for local checks only (fast). Use full mode (no flag) if Snowflake connectivity is available.
+
+**If validation fails:** Read `/tmp/validation_report.json` and send a Slack DM to nmart (U051CL4GC2X) with the failures. Use the Slack MCP `post_message` tool:
+- Channel: DM to U051CL4GC2X
+- Message format:
+  ```
+  :red_circle: *Dashboard Validation Failed*
+  {N} checks failed:
+  • {failure 1}
+  • {failure 2}
+  Dashboard was NOT deployed. Fix the issues and re-run.
+  ```
+- **Do NOT deploy to Block Cell if validation fails.** Stop and alert.
+
+**If validation passes with warnings:** Include warnings in the report output but proceed with deployment.
+
+**If validation passes:** Proceed to deploy.
+
+## Step 12: Deploy to Block Cell
 
 Upload the Pacing Dashboard directory to Block Cell:
 - Site name: `nmart-pacing-dashboard`
 - Production URL: https://blockcell.sqprod.co/sites/nmart-pacing-dashboard/index.html
 
-## Step 12: Report
+## Step 13: Report & Notify
 
 Output a summary:
 - Timestamp
 - Number of metrics populated
 - Any missing cells (flagged as `--`)
-- Any scorecard signal changes from prior refresh (if prior file exists)
+- Validation results (passes, warnings)
 - Number of commentary takeaways extracted from Innercore doc
+
+**On successful deploy**, send a Slack DM to nmart (U051CL4GC2X):
+```
+:white_check_mark: *Dashboard Refreshed*
+{timestamp} — {N} checks passed, {W} warnings
+Key metrics: GP {value}, AOI {value}, Rule of 40 {value}
+:link: https://blockcell.sqprod.co/sites/nmart-pacing-dashboard/index.html
+```

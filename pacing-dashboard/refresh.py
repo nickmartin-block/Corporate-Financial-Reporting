@@ -438,6 +438,22 @@ def main():
     ]:
         monthly.append(build_monthly(gpv_id, gpv_label, gpv_row, "yoy", "B", _fgpv, _fd_gpv))
 
+    # Inflows per Active
+    def _fipa(v): return f"${v:,.0f}" if v is not None else "--"
+    def _fd_ipa(v):
+        if v is None: return "--"
+        return f"(${abs(v):,.0f})" if v < 0 else f"+${v:,.0f}"
+    monthly.append(build_monthly("ipa", "Inflows per Active", ipa, "yoy", "$", _fipa, _fd_ipa))
+
+    # Monetization Rate
+    def _fmon(v): return f"{v:.2f}%" if v is not None else "--"
+    def _fd_mon(v):
+        if v is None: return "--"
+        bps = round(v * 100)
+        if abs(bps) < 1: return "0 bps"
+        return f"({abs(bps)} bps)" if bps < 0 else f"+{bps} bps"
+    monthly.append(build_monthly("monetization", "Monetization Rate", mon, "yoy", "%", _fmon, _fd_mon))
+
     # Adjusted Operating Income (margin chart type)
     monthly.append(build_monthly("aoi", "Adjusted Operating Income", aoi_r, "margin", "M", fM, fdD,
                                  margin_row=mar))

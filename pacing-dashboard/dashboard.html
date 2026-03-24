@@ -674,12 +674,15 @@
         planLineData = ms.map(m => m.plan_yoy_raw);
         lineLabel = 'YoY Growth'; planLabel = 'Plan YoY'; lineAxisLabel = 'Growth %';
       }
-      const unitLabel = metric.unit === 'B' ? '$B' : metric.unit === 'M_users' ? 'Actives (M)' : '$M';
+      const unitMap = {'B': '$B', 'M_users': 'Actives (M)', '$': '$', '%': 'Rate %', 'M': '$M'};
+      const unitLabel = unitMap[metric.unit] || '$M';
       const planBarData = ms.map(m => m.plan_raw);
       const fmtVal = v => {
         if (v == null) return '';
         if (metric.unit === 'B') return '$' + v.toFixed(1) + 'B';
         if (metric.unit === 'M_users') return v.toFixed(1) + 'M';
+        if (metric.unit === '$') return '$' + v.toLocaleString();
+        if (metric.unit === '%') return v.toFixed(2) + '%';
         return '$' + v.toLocaleString() + 'M';
       };
 

@@ -737,7 +737,7 @@
   <!-- ═══ Tabs ═══ -->
   <nav class="tabs">
     <div class="tab active" data-page="page-overview">Overview</div>
-    <div class="tab" data-page="page1">Q1 Pacing</div>
+    <div class="tab" data-page="page1">Quarterly Pacing</div>
     <div class="tab" data-page="page-updates">Additional Updates</div>
     <div class="tab" data-page="page-consensus">Constants</div>
     <div class="tab" data-page="page2">FY2026 Outlook</div>
@@ -773,6 +773,11 @@
       </div>
 
       <div class="overview-tab-card">
+        <h4>Constants</h4>
+        <p>A recurring pacing pack for Cash App and Square covering month-to-date performance across volume, acquisition, and engagement metrics. Updated each Wednesday with an executive TL;DR pulled directly from the deck.</p>
+      </div>
+
+      <div class="overview-tab-card">
         <h4>FY2026 Outlook <span class="dev-tag">Preliminary — Under Development</span></h4>
         <p>A forward-looking view of the full-year forecast — tracking Block's growth and profitability outlook relative to external consensus estimates throughout the year. This section is actively being built out.</p>
       </div>
@@ -783,7 +788,6 @@
     <div class="overview-note">
       <p>Each page includes a <span class="note-label">Discussion</span> section at the bottom where team members can post comments and tag colleagues using @name (e.g., @amrita). Tagged individuals receive an email notification with the comment and a link to the dashboard.</p>
       <p>An automated refresh runs at <span class="note-label">9:00 AM and 2:00 PM PT each Tuesday</span> to ensure all comments are visible to everyone.</p>
-      <p class="note-warning">Please do not use the "Clear all" button — Corporate FP&amp;A will clear comment threads as needed.</p>
     </div>
 
     <div class="overview-contact">
@@ -921,12 +925,7 @@
   <!-- ═══════════════════════════════════════════════════ -->
   <!-- PAGE: Constants                                     -->
   <!-- ═══════════════════════════════════════════════════ -->
-  <div class="page" id="page-consensus">
-    <div class="updates-empty-state">
-      <div class="updates-empty-title">Constants</div>
-      <p>This section is under development.</p>
-    </div>
-  </div>
+  <div class="page" id="page-consensus"></div>
 
   <!-- ═══ Chart.js ═══ -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
@@ -935,6 +934,7 @@
   <script src="dashboard_data.js"></script>
   <script src="comments_data.js"></script>
   <script src="directory_data.js"></script>
+  <script src="constants_data.js"></script>
 
   <!-- ═══ Rendering Logic ═══ -->
   <script>
@@ -950,6 +950,14 @@
       document.getElementById('placeholder-badge').style.display = 'none';
     }
 
+    // ─── Access Logging ───
+    function logAccess(page) {
+      if (!COMMENTS_API_URL) return;
+      var user = localStorage.getItem('dashboard_comment_author') || 'anonymous';
+      var params = new URLSearchParams({ action: 'log', user: user, page: page });
+      new Image().src = COMMENTS_API_URL + '?' + params.toString();
+    }
+
     // ─── Tab Navigation ───
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -957,6 +965,7 @@
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById(tab.dataset.page).classList.add('active');
+        logAccess(PAGE_LABELS[tab.dataset.page] || tab.dataset.page);
       });
     });
 
@@ -1325,6 +1334,9 @@
       'page2': 'FY2026 Outlook'
     };
 
+    // Log initial page load
+    logAccess('Q1 Pacing');
+
     let commentsCache = {};
 
     function escapeHtml(str) {
@@ -1385,7 +1397,7 @@
       container.innerHTML = `
         <div class="comments-header-row">
           <h3 class="comments-header" style="margin-bottom:0">Discussion</h3>
-          <button class="comment-clear-btn" onclick="clearAllComments()">Clear all</button>
+          <button class="comment-clear-btn" style="display:none" onclick="clearAllComments()">Clear all</button>
         </div>
         <div class="comment-form">
           <input type="text" placeholder="Your name" class="comment-name-input" value="${escapeHtml(savedName)}">
@@ -1445,6 +1457,7 @@
       // Save name
       localStorage.setItem('dashboard-comment-name', author);
       document.querySelectorAll('.comment-name-input').forEach(el => { el.value = author; });
+      checkAdmin();
 
       // Send to Google Sheet via Image tag (fire-and-forget, bypasses CORS)
       const params = new URLSearchParams({
@@ -1478,9 +1491,45 @@
       // Clear local storage
       localStorage.removeItem('dashboard-comments');
 
-      // Refresh display (server comments will return on next refresh)
-      loadAllComments();
+      // Clear in-memory data so comments don't reappear from cached files
+      if (typeof DASHBOARD_COMMENTS !== 'undefined') DASHBOARD_COMMENTS.length = 0;
+      if (D.comments) D.comments.length = 0;
+
+      commentsCache = {};
       Object.keys(PAGE_LABELS).forEach(pid => renderComments(pid));
+    }
+
+    // ─── Constants Page (rendered from constants_data.js) ───
+    if (typeof DASHBOARD_CONSTANTS !== 'undefined') {
+      var cn = DASHBOARD_CONSTANTS;
+      var bullet = 'font-size:13px;color:#333;padding-left:16px;position:relative;margin-bottom:4px;';
+      var dot = 'position:absolute;left:0;top:7px;width:5px;height:5px;border-radius:50%;background:#999;';
+      var chtml = '';
+
+      // Header with deck link
+      chtml += '<div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">';
+      chtml += '<div><div class="section-header" style="margin:0;border:none;padding:0;">Constants — Biz Perf</div>';
+      chtml += '<div style="font-size:11px;color:#999;margin-top:4px;">' + escapeHtml(cn.data_thru) + '</div></div>';
+      chtml += '<a href="' + cn.deck_url + '" target="_blank" style="font-size:12px;font-weight:600;color:#1a73e8;text-decoration:none;padding:6px 14px;border:1px solid #1a73e8;border-radius:4px;">Open Full Deck</a>';
+      chtml += '</div>';
+
+      // TL;DR
+      chtml += '<div class="takeaways" style="border-left:3px solid #1a1a1a;">';
+      chtml += '<h3>TL;DR <span style="font-weight:400;font-style:italic;font-size:10px;letter-spacing:0.3px;color:#999">as of ' + cn.as_of + ' &nbsp;|&nbsp; Refreshed each Wednesday</span></h3>';
+      chtml += '<div style="margin-top:12px;">';
+
+      cn.sections.forEach(function(s, i) {
+        var title = escapeHtml(s.title).replace('/', ' / ');
+        chtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#1a1a1a;margin-bottom:6px;">' + title + '</div>';
+        chtml += '<ul style="list-style:none;margin-bottom:' + (i < cn.sections.length - 1 ? '16px' : '0') + ';">';
+        s.items.forEach(function(item) {
+          chtml += '<li style="' + bullet + '"><span style="' + dot + '"></span>' + escapeHtml(item) + '</li>';
+        });
+        chtml += '</ul>';
+      });
+
+      chtml += '</div></div>';
+      document.getElementById('page-consensus').innerHTML = chtml;
     }
 
     // ─── @Mention Autocomplete ───
@@ -1543,6 +1592,17 @@
       });
     }
 
+    // Admin control — only admins see "Clear all"
+    var COMMENT_ADMINS = ['nmart', 'nick martin'];
+
+    function checkAdmin() {
+      var name = (localStorage.getItem('dashboard-comment-name') || '').toLowerCase().trim();
+      var isAdmin = COMMENT_ADMINS.indexOf(name) !== -1;
+      document.querySelectorAll('.comment-clear-btn').forEach(function(btn) {
+        btn.style.display = isAdmin ? '' : 'none';
+      });
+    }
+
     // Initialize
     Object.keys(PAGE_LABELS).forEach(pid => renderCommentSection(pid));
     loadAllComments();
@@ -1552,6 +1612,7 @@
       var c = document.getElementById('comments-' + pid);
       if (c) initMentionAutocomplete(c);
     });
+    checkAdmin();
   </script>
 </body>
 </html>

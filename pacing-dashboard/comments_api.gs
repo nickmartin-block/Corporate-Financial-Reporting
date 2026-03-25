@@ -1,4 +1,5 @@
 var SHEET_NAME = 'Sheet1';
+var LOG_SHEET_NAME = 'Access Log';
 var DASHBOARD_URL = 'https://blockcell.sqprod.co/sites/nmart-pacing-dashboard/';
 var OWNER_EMAIL = 'nmart@block.xyz';
 var DEFAULT_DOMAIN = 'block.xyz';
@@ -7,6 +8,17 @@ function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEET_NAME);
   var callback = e.parameter.callback || '';
+
+  // ─── Access Logging ───
+  if (e.parameter.action === 'log') {
+    var logSheet = ss.getSheetByName(LOG_SHEET_NAME);
+    if (logSheet) {
+      var user = e.parameter.user || 'anonymous';
+      var page = e.parameter.page || 'unknown';
+      logSheet.appendRow([new Date().toISOString(), user, page]);
+    }
+    return respond({ success: true }, callback);
+  }
 
   if (e.parameter.action === 'clear') {
     var lastRow = sheet.getLastRow();

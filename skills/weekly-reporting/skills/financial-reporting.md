@@ -5,7 +5,7 @@ depends-on: [gdrive, sheet-to-doc-table]
 allowed-tools: []
 metadata:
   author: nmart
-  version: "1.1.0"
+  version: "1.2.0"
   status: "active"
 ---
 
@@ -68,6 +68,8 @@ Key metric labels are always **bold** in fact lines. This includes metric names 
 - Dollars in millions: one decimal if < $10M ($4.2M, -$7.8M), no decimal if ≥ $10M ($45M)
 - Dollars in billions: always two decimals ($1.26B)
 - Actives: always one decimal (58.5M)
+- Basis points in body text: round to nearest integer (6.1 bps → 6 bps)
+- Basis points in charts/tables: keep one decimal (6.1 bps → 6.1 bps)
 
 **Signs**
 - Always include +/- on variances and YoY growth rates
@@ -82,6 +84,42 @@ Key metric labels are always **bold** in fact lines. This includes metric names 
 - "gross profit" and "opex" — lowercase in body text
 - Standalone headers: capitalize all major words
 - In-line bold labels (e.g. **Topline:**) — capitalize first word only
+
+**Dashes**
+- Em dash (—): interruptions or direction changes; spaces on either side in internal prose
+- En dash (–): ranges without spaces (5–10, $15–$20)
+- Hyphen (-): negative numbers in body text, compound terms
+
+**Punctuation**
+- Oxford/serial comma: always ("Square, Cash App, and Afterpay")
+- Spell out numbers below ten in body text; numerals for measurements and amounts
+- Contractions OK — keeps tone conversational
+
+**Hyphenation**
+- Compound adjectives before a noun: year-over-year increase, lower-than-expected churn, small-business owner
+- Predicate adjectives (after the noun): no hyphen — "Profit increased year over year"
+- Adverbs ending in -ly: no hyphen — manually entered, fully loaded
+- Financial compounds: top-line, in-line, true-up, true-down, bottom-up (not "bottoms-up")
+
+---
+
+## Variance Colors
+- Favorable: green `#34a853`
+- Unfavorable: red `#ea4335`
+- Chart headers: black background with white text
+- Not color-coded: variances within +/- 1% or +/- $0.5M, and all YoY comparisons
+
+---
+
+## Terminology
+- **Annual Plan (AP)**: capitalize; spell out on first use; do not use "Plan/plan" as shorthand
+- **Outlook**: capitalize; spell out for BoD deliverables; abbreviation (Q2OL) OK in MRP and chart/table headers
+- **Rule of 40**: capitalize; do not abbreviate as R40
+- **Adjusted**: write out "Adjusted" in body text; OK to abbreviate "Adj." in charts/tables
+- **Product names**: use official names — Cash App Card (not "Card"), Pay in 4 (not "Pi4")
+- **Acronyms**: spell out on first use in board documents; abbreviate on subsequent references
+- **buyside**: one word
+- **Bank Our Base**: not "Bank the Base"
 
 ---
 

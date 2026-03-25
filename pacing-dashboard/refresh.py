@@ -518,8 +518,8 @@ def main():
             "delta_dollar": fdD(aoi_vs), "delta_margin": fmt_margin_delta(q1_aoi_margin, q1_cons_aoi_margin)
         },
         "gp_net_risk": {
-            "forecast": fB(gnrl_q1), "yoy": fpg(sg(gnrl_y, 17)),
-            "consensus": fB(gnrl_c), "cons_yoy": fpg(sg(gnrl_y, 21)),
+            "forecast": fB(gnrl_q1), "yoy": fp(sg(gnrl_y, 17)),
+            "consensus": fB(gnrl_c), "cons_yoy": fp(sg(gnrl_y, 21)),
             "delta_dollar": fdD(gnrl_vs), "delta_growth": gd(sg(gnrl_y, 17), sg(gnrl_y, 21))
         }
     })
@@ -552,7 +552,7 @@ def main():
             },
             "gp_net_risk": {
                 "forecast": fB(int_gnrl), "yoy": fmt_yoy(corp_gnrl_yoy[i]),
-                "consensus": fB(con_gnrl), "cons_yoy": fpg(cons_gnrl_yoy[i]),
+                "consensus": fB(con_gnrl), "cons_yoy": fp(cons_gnrl_yoy[i]),
                 "delta_dollar": fdD(gnrl_delta),
                 "delta_growth": gd_v(corp_gnrl_yoy[i], con_gnrl_yoy_v)
             }
@@ -637,9 +637,9 @@ def main():
                  "vs_cons": f"+{ro40_v - ro40_c:.0f} pts" if ro40_v and ro40_c else "--",
                  "signal": "neutral"},
                 {"metric": "GP Net of Risk Loss", "pacing": fB(gnrl_q1), "wow": "--",
-                 "yoy": fpg(sg(gnrl_y, 17)), "ap": fB(gnrl_ap), "guidance": "--",
+                 "yoy": fp(sg(gnrl_y, 17)), "ap": fB(gnrl_ap), "guidance": "--",
                  "vs_guide": "--",
-                 "consensus": fB(gnrl_c), "cons_yoy": fpg(sg(gnrl_y, 21)),
+                 "consensus": fB(gnrl_c), "cons_yoy": fp(sg(gnrl_y, 21)),
                  "vs_cons": fdD(gnrl_vs), "signal": sig(pd(gnrl_q1, gnrl_c))}
             ]
         },

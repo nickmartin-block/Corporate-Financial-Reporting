@@ -66,6 +66,37 @@
       letter-spacing: 0.5px;
     }
 
+    .header .validation-badge {
+      padding: 3px 10px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .header .validation-badge.pass { background: #16a34a; color: #fff; }
+    .header .validation-badge.warn { background: #d4a017; color: #1a1a1a; }
+    .header .validation-badge.fail { background: #dc2626; color: #fff; }
+    .header .validation-badge.unknown { background: #555; color: #ccc; }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header .actuals-source {
+      font-size: 10px;
+      color: #777;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .header .actuals-source .dot {
+      width: 6px; height: 6px; border-radius: 50%; display: inline-block;
+    }
+    .header .actuals-source .dot.verified { background: #16a34a; }
+    .header .actuals-source .dot.unverified { background: #d4a017; }
+
     /* ─── Tab Navigation ─── */
     .tabs {
       display: flex;
@@ -730,8 +761,12 @@
       <h1>Block Performance Dashboard</h1>
       <span class="quarter-badge" id="quarter-badge">Q1 2026</span>
       <span class="placeholder-badge" id="placeholder-badge">Placeholder Data</span>
+      <span class="validation-badge unknown" id="validation-badge">--</span>
     </div>
-    <span class="last-updated" id="last-updated">Last updated: --</span>
+    <div class="header-right">
+      <span class="actuals-source" id="actuals-source"></span>
+      <span class="last-updated" id="last-updated">Last updated: --</span>
+    </div>
   </header>
 
   <!-- ═══ Tabs ═══ -->
@@ -791,7 +826,7 @@
     </div>
 
     <div class="overview-contact">
-      Questions or feedback? Reach out to <a href="mailto:nmart@block.xyz">nmart@block.xyz</a>
+      Questions or feedback? Reach out to <a href="/cdn-cgi/l/email-protection#84eae9e5f6f0c4e6e8ebe7efaafcfdfe"><span class="__cf_email__" data-cfemail="412f2c20333501232d2e222a6f39383b">[email&#160;protected]</span></a>
     </div>
 
   </div>
@@ -928,7 +963,7 @@
   <div class="page" id="page-consensus"></div>
 
   <!-- ═══ Chart.js ═══ -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
   <!-- ═══ Data ═══ -->
   <script src="dashboard_data.js"></script>
@@ -950,11 +985,59 @@
       document.getElementById('placeholder-badge').style.display = 'none';
     }
 
+    // Validation badge — reads validation_report.json if available
+    (function() {
+      var vb = document.getElementById('validation-badge');
+      if (D.meta.validation) {
+        var v = D.meta.validation;
+        var cls = v.status === 'PASS' ? 'pass' : (v.fails > 0 ? 'fail' : 'warn');
+        vb.className = 'validation-badge ' + cls;
+        vb.textContent = v.status + ' (' + v.total + '/' + v.total + ')';
+        if (v.fails > 0) vb.textContent = 'FAIL (' + v.fails + ' issue' + (v.fails > 1 ? 's' : '') + ')';
+        if (v.warns > 0 && v.fails === 0) vb.textContent = 'PASS (' + v.warns + ' warn)';
+      } else {
+        // Try loading from validation_report.json
+        fetch('validation_report.json').then(function(r) { return r.json(); }).then(function(v) {
+          var cls = v.status === 'PASS' ? 'pass' : (v.fails > 0 ? 'fail' : 'warn');
+          vb.className = 'validation-badge ' + cls;
+          var total = v.total || (v.passes + v.fails + v.warns + v.skips);
+          vb.textContent = v.status + ' (' + total + '/' + total + ')';
+          if (v.fails > 0) vb.textContent = 'FAIL (' + v.fails + ' issue' + (v.fails > 1 ? 's' : '') + ')';
+          if (v.warns > 0 && v.fails === 0) vb.textContent = 'PASS (' + v.warns + ' warn)';
+        }).catch(function() { vb.style.display = 'none'; });
+      }
+    })();
+
+    // Actuals source indicator
+    (function() {
+      var as = document.getElementById('actuals-source');
+      var src = D.meta.actuals_source || 'unknown';
+      var verified = src === 'mcp';
+      as.innerHTML = '<span class="dot ' + (verified ? 'verified' : 'unverified') + '"></span>' +
+        'Actuals: ' + (verified ? 'MCP verified' : 'fallback');
+    })();
+
+    // ─── SSO Identity (from CDP cookies) ───
+    function getSSOUser() {
+      var cookies = document.cookie.split('; ');
+      for (var i = 0; i < cookies.length; i++) {
+        var parts = cookies[i].split('=');
+        if (parts[0].startsWith('cdpUserEntityType_') && parts[1] === 'square_employee') {
+          var uuid = parts[0].replace('cdpUserEntityType_', '');
+          for (var j = 0; j < cookies.length; j++) {
+            var p2 = cookies[j].split('=');
+            if (p2[0] === 'cdpUserEntityId_' + uuid) return p2[1];
+          }
+        }
+      }
+      return null;
+    }
+    var SSO_USER = getSSOUser() || localStorage.getItem('dashboard-comment-name') || 'anonymous';
+
     // ─── Access Logging ───
     function logAccess(page) {
       if (!COMMENTS_API_URL) return;
-      var user = localStorage.getItem('dashboard_comment_author') || 'anonymous';
-      var params = new URLSearchParams({ action: 'log', user: user, page: page });
+      var params = new URLSearchParams({ action: 'log', user: SSO_USER, page: page });
       new Image().src = COMMENTS_API_URL + '?' + params.toString();
     }
 

@@ -15,6 +15,7 @@ Usage:
   Then: python3 ~/Desktop/Nick's\ Cursor/Pacing\ Dashboard/refresh.py
 """
 
+import hashlib
 import json
 import os
 import sys
@@ -22,6 +23,8 @@ from datetime import datetime, timezone
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_PATH = os.path.join(SCRIPT_DIR, "dashboard_data.js")
+CHANGE_LOG_PATH = os.path.join(SCRIPT_DIR, "change_log.jsonl")
+PRIOR_DATA_PATH = os.path.join(SCRIPT_DIR, ".dashboard_data_prior.js")
 
 # Sheet IDs
 PACING_SHEET_ID = "1hvKbg3t08uG2gbnNjag04RNHbu9rddIU4woudxeH1d4"
@@ -33,6 +36,26 @@ PACING_TAB = "summary"
 CORP_TAB = "Summary P&L"
 CONSENSUS_TAB = "Visible Alpha Consensus Summary"
 
+# ─── Column Map (pacing sheet) ───
+# Documenting all magic column indices for maintainability
+COL_LABEL = 1          # Metric labels (used for row lookups)
+COL_PY = (2, 3, 4)    # Prior year actuals (Jan, Feb, Mar)
+COL_PLAN = (5, 6, 7)  # 2026 Annual Plan (Jan, Feb, Mar)
+COL_CY = (11, 12, 13) # 2026 Actual/Pacing (Jan, Feb, Mar)
+COL_PACING = 17        # Current month pacing (primary value)
+COL_AP = 18            # Q1 Annual Plan
+COL_GUIDANCE = 20      # Internal guidance
+COL_CONSENSUS = 21     # Street consensus
+COL_PRIOR_WK = 27      # Prior week pacing (for WoW)
+COL_WOW = 28           # Pre-computed WoW delta
+
+# ─── Column Map (corporate model) ───
+COL_CORP_FWD = (107, 108, 109)  # Q2, Q3, Q4 forecast
+COL_CORP_PY = (102, 103, 104)   # Q2, Q3, Q4 prior year
+
+# ─── Column Map (consensus model) ───
+COL_CONS_FWD = (3, 4, 5)  # Q2, Q3, Q4 consensus
+
 # ─── Temp file paths (written by gdrive-cli before this script runs) ───
 PACING_JSON = "/tmp/pacing_sheet.json"
 CORP_JSON = "/tmp/corp_model.json"
@@ -41,14 +64,76 @@ COMMENTARY_JSON = "/tmp/commentary.json"  # Optional: written by skill from Inne
 COMMENTS_JSON = "/tmp/dashboard_comments.json"  # Comments sheet
 COMMENTS_SHEET_ID = "1HiiRZFv-CBA3xy2Fbr1T02xW4pgRPlbd2TQIYTNnmW8"
 
-# ─── Q1 2025 Historical Actuals (from Snowflake, fixed) ───
-# Source: APP_HEXAGON.SCHEDULE2.FINANCIAL_METRIC_SUMMARY, scenario='Actual', Q1 2024/2025
-Q1_2024_GP = 2094472510.10       # Block Gross Profit Q1 2024 (USD)
-Q1_2025_GP = 2289603216.33       # Block Gross Profit Q1 2025 (USD)
-Q1_2025_AOI = 466268762.99       # Adjusted Operating Income Q1 2025 (USD)
-Q1_2025_MARGIN = Q1_2025_AOI / Q1_2025_GP * 100        # 20.37%
-Q1_2025_GP_GROWTH = (Q1_2025_GP - Q1_2024_GP) / Q1_2024_GP * 100  # 9.32%
-Q1_2025_RO40 = Q1_2025_GP_GROWTH + Q1_2025_MARGIN      # 29.68%
+# ─── Q1 2025 Historical Actuals — Fallback Constants ───
+# These are the last-known-good values. At refresh time, the pipeline attempts to
+# verify them against Block Data MCP (/tmp/mcp_actuals.json). If MCP data is
+# unavailable, these fallbacks are used and the run is flagged as "degraded".
+# Source: APP_HEXAGON.SCHEDULE2.FINANCIAL_METRIC_SUMMARY, scenario='Actual'
+FALLBACK_Q1_2024_GP = 2094472510.10       # Block Gross Profit Q1 2024 (USD)
+FALLBACK_Q1_2025_GP = 2289603216.33       # Block Gross Profit Q1 2025 (USD)
+FALLBACK_Q1_2025_AOI = 466268762.99       # Adjusted Operating Income Q1 2025 (USD)
+
+MCP_ACTUALS_PATH = "/tmp/mcp_actuals.json"
+
+
+def load_verified_actuals():
+    """Load prior-year actuals, preferring MCP-verified values over fallbacks.
+
+    Returns (actuals_dict, source_label) where source_label is "mcp" or "fallback".
+    If MCP data is present, cross-checks against fallback constants with zero tolerance.
+    """
+    fallback = {
+        "Q1_2024_GP": FALLBACK_Q1_2024_GP,
+        "Q1_2025_GP": FALLBACK_Q1_2025_GP,
+        "Q1_2025_AOI": FALLBACK_Q1_2025_AOI,
+    }
+
+    if os.path.exists(MCP_ACTUALS_PATH):
+        try:
+            with open(MCP_ACTUALS_PATH) as f:
+                mcp = json.load(f)
+
+            # Validate required keys
+            required = ["Q1_2024_GP", "Q1_2025_GP", "Q1_2025_AOI"]
+            if all(k in mcp and mcp[k] is not None for k in required):
+                # Zero-tolerance cross-check vs fallback (closed-book numbers)
+                mismatches = []
+                for key in required:
+                    mcp_val = float(mcp[key])
+                    fb_val = fallback[key]
+                    delta = abs(mcp_val - fb_val)
+                    if delta > 0.01:  # sub-penny tolerance for float comparison
+                        mismatches.append(
+                            f"  {key}: MCP=${mcp_val:,.2f}  Fallback=${fb_val:,.2f}  Δ=${delta:,.2f}"
+                        )
+
+                if mismatches:
+                    print("⚠  MCP actuals differ from fallback constants (zero tolerance):")
+                    for m in mismatches:
+                        print(m)
+                    print("   Using MCP values (source of truth). Update FALLBACK_* constants in refresh.py.")
+
+                actuals = {k: float(mcp[k]) for k in required}
+                print(f"  ✓ Prior-year actuals loaded from Block Data MCP")
+                return actuals, "mcp"
+            else:
+                print(f"  ⚠ MCP actuals file missing required keys, using fallback")
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
+            print(f"  ⚠ Could not parse MCP actuals ({e}), using fallback")
+    else:
+        print(f"  ○ No MCP actuals file found, using fallback constants")
+
+    return fallback, "fallback"
+
+
+# Load actuals at module level
+_actuals, _actuals_source = load_verified_actuals()
+Q1_2024_GP = _actuals["Q1_2024_GP"]
+Q1_2025_GP = _actuals["Q1_2025_GP"]
+Q1_2025_AOI = _actuals["Q1_2025_AOI"]
+Q1_2025_MARGIN = Q1_2025_AOI / Q1_2025_GP * 100
+Q1_2025_GP_GROWTH = (Q1_2025_GP - Q1_2024_GP) / Q1_2024_GP * 100
+Q1_2025_RO40 = Q1_2025_GP_GROWTH + Q1_2025_MARGIN
 
 
 # ═══════════════════════════════════════════════════════
@@ -560,13 +645,46 @@ def main():
             }
         })
 
+    # ─── PACING CHECKSUM (governance: detect changes between refreshes) ───
+    # Extract col 17 (current pacing) for all tracked rows
+    pacing_tracked_rows = [r_bgp, r_cagp, r_sqgp, r_aoi, r_gnrl, r_act, r_ipa, r_mon,
+                           r_gg, r_ug, r_ig]
+    pacing_fingerprint = {str(r): sg(pacing[r], 17) for r in pacing_tracked_rows}
+    pacing_checksum = hashlib.sha256(
+        json.dumps(pacing_fingerprint, sort_keys=True).encode()
+    ).hexdigest()
+
     # ─── BUILD FULL OUTPUT ───
     out = {
         "meta": {
             "generated_at": now, "quarter": "Q1", "year": 2026,
             "current_month": "March",
             "sheet_id": PACING_SHEET_ID,
-            "is_placeholder": False
+            "is_placeholder": False,
+            "actuals_source": _actuals_source,
+            "pacing_checksum": pacing_checksum,
+            "lineage": {
+                "prior_year_actuals": {
+                    "source": "block_data_mcp" if _actuals_source == "mcp" else "fallback_constants",
+                    "status": "verified" if _actuals_source == "mcp" else "unverified",
+                },
+                "q1_pacing": {
+                    "source": "google_sheets",
+                    "sheet_id": PACING_SHEET_ID,
+                    "tab": PACING_TAB,
+                    "checksum": pacing_checksum,
+                },
+                "q2_q4_forecast": {
+                    "source": "corp_model_sheet",
+                    "sheet_id": CORP_MODEL_ID,
+                    "tab": CORP_TAB,
+                },
+                "consensus": {
+                    "source": "consensus_sheet",
+                    "sheet_id": CONSENSUS_MODEL_ID,
+                    "tab": CONSENSUS_TAB,
+                },
+            },
         },
         "takeaways": {
             "gp": {"value": fB(bgp_q1), "yoy": fp(sg(bgp_y, 17)), "vs_cons_dollar": fdD(bgp_vs)},
@@ -718,13 +836,18 @@ def main():
         "comments": load_comments()
     }
 
-    # Write JS
+    # ─── CHANGE LOG (governance: audit trail of pacing movements) ───
+    _write_change_log(out, now)
+
+    # Write JS (atomic: write to temp, then rename)
     js = (f"// Dashboard data — generated {now}\n"
           f"// Source: pacing sheet + corp model + consensus model\n"
           f"const DASHBOARD_DATA = {json.dumps(out, indent=2)};\n")
 
-    with open(OUTPUT_PATH, "w") as f:
+    tmp_path = OUTPUT_PATH + ".tmp"
+    with open(tmp_path, "w") as f:
         f.write(js)
+    os.replace(tmp_path, OUTPUT_PATH)
 
     # Report
     print(f"✓ dashboard_data.js generated — {now}")
@@ -743,6 +866,61 @@ def main():
     for q in qf:
         m = q["gp_net_risk"]
         print(f"    {q['quarter']}'26: {m['forecast']} ({m['yoy']}) vs {m['consensus']} ({m['cons_yoy']}) | {m['delta_dollar']}")
+
+
+def _load_prior_data():
+    """Load prior dashboard_data.js for change comparison."""
+    if not os.path.exists(PRIOR_DATA_PATH):
+        return None
+    try:
+        with open(PRIOR_DATA_PATH) as f:
+            content = f.read()
+        json_str = content.split("const DASHBOARD_DATA = ", 1)[1].rstrip().rstrip(";")
+        return json.loads(json_str)
+    except Exception:
+        return None
+
+
+def _write_change_log(current, timestamp):
+    """Diff pacing values vs prior refresh and append to change_log.jsonl."""
+    prior = _load_prior_data()
+    checksum = current.get("meta", {}).get("pacing_checksum", "")
+
+    if prior is None:
+        entry = {"ts": timestamp, "changes": [], "note": "no prior data", "checksum": checksum}
+        with open(CHANGE_LOG_PATH, "a") as f:
+            f.write(json.dumps(entry) + "\n")
+        print("  ○ Change log: no prior data to compare")
+        return
+
+    prior_checksum = prior.get("meta", {}).get("pacing_checksum", "")
+    if checksum and checksum == prior_checksum:
+        entry = {"ts": timestamp, "changes": [], "note": "no changes (checksum match)", "checksum": checksum}
+        with open(CHANGE_LOG_PATH, "a") as f:
+            f.write(json.dumps(entry) + "\n")
+        print("  ○ Change log: no pacing changes detected")
+        return
+
+    # Diff all pacing values across tables
+    changes = []
+    for table_key in ["block_table", "cashapp_table", "square_table"]:
+        cur_rows = {r["metric"]: r for r in current.get(table_key, {}).get("rows", [])}
+        pri_rows = {r["metric"]: r for r in prior.get(table_key, {}).get("rows", [])}
+        for metric, cur_row in cur_rows.items():
+            pri_row = pri_rows.get(metric, {})
+            for field in ["pacing", "wow", "consensus", "yoy"]:
+                cur_val = cur_row.get(field, "--")
+                pri_val = pri_row.get(field, "--")
+                if cur_val != pri_val:
+                    changes.append({
+                        "metric": metric, "field": field,
+                        "old": pri_val, "new": cur_val,
+                    })
+
+    entry = {"ts": timestamp, "changes": changes, "checksum": checksum}
+    with open(CHANGE_LOG_PATH, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+    print(f"  ✓ Change log: {len(changes)} field(s) changed")
 
 
 def load_comments():

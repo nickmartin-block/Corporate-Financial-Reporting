@@ -100,11 +100,9 @@
     .takeaways {
       background: #fff;
       border: 1px solid #e2e5e9;
-      border-left: 3px solid #1a1a1a;
       border-radius: 8px;
       padding: 16px 20px;
       margin-bottom: 24px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
     }
 
     .takeaways h3 {
@@ -172,13 +170,6 @@
       padding: 16px 20px;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
-      transition: box-shadow 0.15s ease, transform 0.15s ease;
-    }
-
-    .scorecard:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.06);
-      transform: translateY(-1px);
     }
 
     .scorecard::before {
@@ -187,7 +178,7 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 4px;
+      height: 3px;
     }
 
     .scorecard.green::before { background: #007A33; }
@@ -252,7 +243,6 @@
       border-radius: 8px;
       overflow: hidden;
       margin-bottom: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
     }
 
     .data-table {
@@ -262,7 +252,7 @@
     }
 
     .data-table thead th {
-      background: linear-gradient(180deg, #242424 0%, #1a1a1a 100%);
+      background: #1a1a1a;
       color: #fff;
       font-weight: 600;
       font-size: 11px;
@@ -295,7 +285,7 @@
     }
 
     .data-table tbody tr:hover {
-      background: #f5f7fa;
+      background: #fafbfc;
     }
 
     /* Pacing column highlight */
@@ -342,376 +332,6 @@
       margin-bottom: 8px;
     }
 
-    /* ─── Overview Page ─── */
-    .overview-hero {
-      margin-bottom: 32px;
-    }
-
-    .overview-hero h2 {
-      font-size: 20px;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 8px;
-      letter-spacing: -0.3px;
-    }
-
-    .overview-hero p {
-      font-size: 14px;
-      color: #555;
-      line-height: 1.7;
-      max-width: 720px;
-    }
-
-    .overview-section-title {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: #666;
-      margin-bottom: 14px;
-      padding-bottom: 6px;
-      border-bottom: 2px solid #1a1a1a;
-    }
-
-    .overview-tabs-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-bottom: 32px;
-    }
-
-    .overview-tab-card {
-      background: #fff;
-      border: 1px solid #e2e5e9;
-      border-left: 3px solid #1a1a1a;
-      border-radius: 8px;
-      padding: 16px 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
-    }
-
-    .overview-tab-card h4 {
-      font-size: 13px;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 6px;
-    }
-
-    .overview-tab-card .dev-tag {
-      font-size: 10px;
-      font-weight: 700;
-      color: #CC0000;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-      margin-left: 6px;
-    }
-
-    .overview-tab-card p {
-      font-size: 13px;
-      color: #555;
-      line-height: 1.6;
-    }
-
-    .overview-tab-card ul {
-      list-style: none;
-      margin-top: 8px;
-    }
-
-    .overview-tab-card ul li {
-      font-size: 12px;
-      color: #555;
-      line-height: 1.6;
-      padding-left: 14px;
-      position: relative;
-    }
-
-    .overview-tab-card ul li::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 8px;
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
-      background: #999;
-    }
-
-    .overview-note {
-      background: #fff;
-      border: 1px solid #e2e5e9;
-      border-radius: 8px;
-      padding: 16px 20px;
-      margin-bottom: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
-    }
-
-    .overview-note p {
-      font-size: 13px;
-      color: #555;
-      line-height: 1.6;
-      margin-bottom: 8px;
-    }
-
-    .overview-note p:last-child {
-      margin-bottom: 0;
-    }
-
-    .overview-note .note-label {
-      font-weight: 600;
-      color: #1a1a1a;
-    }
-
-    .overview-note .note-warning {
-      color: #CC0000;
-      font-weight: 600;
-      font-size: 12px;
-    }
-
-    .overview-contact {
-      font-size: 12px;
-      color: #999;
-      margin-top: 24px;
-      padding-top: 12px;
-      border-top: 1px solid #e2e5e9;
-    }
-
-    .overview-contact a {
-      color: #1a73e8;
-      text-decoration: none;
-    }
-
-    /* ─── Preliminary Banner ─── */
-    .preliminary-banner {
-      color: #CC0000;
-      font-size: 12px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 16px;
-    }
-
-    /* ─── Additional Updates Page ─── */
-    .updates-empty-state {
-      background: #fff;
-      border: 2px dashed #d0d5dd;
-      border-radius: 12px;
-      padding: 60px 32px;
-      text-align: center;
-      max-width: 560px;
-      margin: 80px auto;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-
-    .updates-empty-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 8px;
-    }
-
-    .updates-empty-state p {
-      font-size: 13px;
-      color: #666;
-      line-height: 1.6;
-      margin-bottom: 16px;
-    }
-
-    .updates-source {
-      font-size: 11px;
-      color: #999;
-      font-weight: 500;
-    }
-
-    /* ─── Comments ─── */
-    .comments-section {
-      background: #fff;
-      border: 1px solid #e2e5e9;
-      border-radius: 8px;
-      padding: 20px 24px;
-      margin-top: 32px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
-    }
-
-    .comments-header {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: #666;
-      margin-bottom: 16px;
-    }
-
-    .comment-form {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-
-    .comment-form input,
-    .comment-form textarea {
-      font-family: 'Inter', sans-serif;
-      font-size: 13px;
-      padding: 8px 12px;
-      border: 1px solid #e2e5e9;
-      border-radius: 4px;
-      color: #1a1a1a;
-      background: #fff;
-      resize: vertical;
-    }
-
-    .comment-form input:focus,
-    .comment-form textarea:focus {
-      outline: none;
-      border-color: #999;
-    }
-
-    .comment-form-actions {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .comment-submit-btn {
-      font-family: 'Inter', sans-serif;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 8px 20px;
-      background: #1a1a1a;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    .comment-submit-btn:hover { background: #333; }
-    .comment-submit-btn:disabled { background: #999; cursor: not-allowed; }
-
-    .comment-status {
-      font-size: 11px;
-      color: #999;
-    }
-
-    .comments-list {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .comment-item {
-      padding: 12px 0;
-      border-top: 1px solid #f0f0f0;
-    }
-
-    .comment-meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 4px;
-    }
-
-    .comment-author {
-      font-size: 12px;
-      font-weight: 600;
-      color: #1a1a1a;
-    }
-
-    .comment-date {
-      font-size: 11px;
-      color: #999;
-    }
-
-    .comment-body {
-      font-size: 13px;
-      color: #333;
-      line-height: 1.5;
-    }
-
-    .comment-empty {
-      font-size: 12px;
-      color: #999;
-      font-style: italic;
-      padding: 8px 0;
-    }
-
-    .comment-mention {
-      color: #1a73e8;
-      font-weight: 600;
-    }
-
-    .comment-form-hint {
-      font-size: 11px;
-      color: #999;
-      margin-top: -4px;
-    }
-
-    .mention-wrapper {
-      position: relative;
-    }
-
-    .mention-dropdown {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 100%;
-      background: #fff;
-      border: 1px solid #e2e5e9;
-      border-radius: 6px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      max-height: 200px;
-      overflow-y: auto;
-      z-index: 50;
-    }
-
-    .mention-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px;
-      cursor: pointer;
-      transition: background 0.1s;
-    }
-
-    .mention-item:hover {
-      background: #f5f7fa;
-    }
-
-    .mention-item-name {
-      font-size: 13px;
-      font-weight: 500;
-      color: #1a1a1a;
-    }
-
-    .mention-item-alias {
-      font-size: 12px;
-      color: #1a73e8;
-      font-weight: 500;
-    }
-
-    .comments-header-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-
-    .comment-clear-btn {
-      font-family: 'Inter', sans-serif;
-      font-size: 11px;
-      font-weight: 500;
-      color: #999;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 4px;
-      transition: all 0.15s;
-    }
-
-    .comment-clear-btn:hover {
-      color: #CC0000;
-      background: #fce8e8;
-    }
-
     /* ─── Responsive ─── */
     @media (max-width: 800px) {
       .scorecard-grid.block { grid-template-columns: 1fr; }
@@ -736,74 +356,18 @@
 
   <!-- ═══ Tabs ═══ -->
   <nav class="tabs">
-    <div class="tab active" data-page="page-overview">Overview</div>
-    <div class="tab" data-page="page1">Quarterly Pacing</div>
-    <div class="tab" data-page="page-updates">Additional Updates</div>
-    <div class="tab" data-page="page-consensus">Constants</div>
+    <div class="tab active" data-page="page1">Q1 Pacing</div>
     <div class="tab" data-page="page2">FY2026 Outlook</div>
   </nav>
 
   <!-- ═══════════════════════════════════════════════════ -->
-  <!-- PAGE: Overview                                       -->
-  <!-- ═══════════════════════════════════════════════════ -->
-  <div class="page active" id="page-overview">
-
-    <div class="overview-hero">
-      <h2>Block Performance Dashboard</h2>
-      <p>This dashboard is Amrita's primary reference for business performance — a single source of truth covering where we are pacing, what's changed, and what needs attention. Updated each Tuesday by Corporate FP&amp;A, it consolidates quarterly projections and year-over-year trends into one view for innercore.</p>
-    </div>
-
-    <div class="overview-section-title">What's Inside</div>
-    <div class="overview-tabs-grid">
-
-      <div class="overview-tab-card">
-        <h4>Quarterly Pacing</h4>
-        <p>The current quarter's performance snapshot, refreshed weekly. Includes:</p>
-        <ul>
-          <li>Current quarter projections with week-over-week movement</li>
-          <li>Year-over-year growth performance across Block, Cash App, and Square</li>
-          <li>Performance versus plan and guidance for each financial and operational KPI</li>
-          <li>Key takeaways summarized by Corporate FP&amp;A</li>
-        </ul>
-      </div>
-
-      <div class="overview-tab-card">
-        <h4>Additional Updates</h4>
-        <p>Material watch points and commentary from Block's strategic finance partners on business performance trends, emerging risks, and any items requiring executive attention.</p>
-      </div>
-
-      <div class="overview-tab-card">
-        <h4>Constants</h4>
-        <p>A recurring pacing pack for Cash App and Square covering month-to-date performance across volume, acquisition, and engagement metrics. Updated each Wednesday with an executive TL;DR pulled directly from the deck.</p>
-      </div>
-
-      <div class="overview-tab-card">
-        <h4>FY2026 Outlook <span class="dev-tag">Preliminary — Under Development</span></h4>
-        <p>A forward-looking view of the full-year forecast — tracking Block's growth and profitability outlook relative to external consensus estimates throughout the year. This section is actively being built out.</p>
-      </div>
-
-    </div>
-
-    <div class="overview-section-title">Discussion &amp; Comments</div>
-    <div class="overview-note">
-      <p>Each page includes a <span class="note-label">Discussion</span> section at the bottom where team members can post comments and tag colleagues using @name (e.g., @amrita). Tagged individuals receive an email notification with the comment and a link to the dashboard.</p>
-      <p>An automated refresh runs at <span class="note-label">9:00 AM and 2:00 PM PT each Tuesday</span> to ensure all comments are visible to everyone.</p>
-    </div>
-
-    <div class="overview-contact">
-      Questions or feedback? Reach out to <a href="mailto:nmart@block.xyz">nmart@block.xyz</a>
-    </div>
-
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════ -->
   <!-- PAGE 1: Current Quarter Pacing                      -->
   <!-- ═══════════════════════════════════════════════════ -->
-  <div class="page" id="page1">
+  <div class="page active" id="page1">
 
     <!-- Key Takeaways -->
     <div class="takeaways" id="takeaways-p1">
-      <h3>Key Takeaways <span style="font-weight:400; font-style:italic; font-size:10px; letter-spacing:0.3px; color:#999">Authored by Corporate FP&amp;A</span></h3>
+      <h3>Key Takeaways</h3>
       <ul>
         <li><strong>Gross profit</strong> is expected to land at <strong>$2.90B</strong>, +27% YoY, <strong>+$100M vs. consensus</strong></li>
         <li><strong>Adjusted operating income</strong> is expected to land at <strong>$638M</strong>, 22% margin, <strong>+$27M vs. consensus</strong></li>
@@ -845,27 +409,10 @@
       <table class="data-table" id="monthly-table"></table>
     </div>
 
-    <div style="background:#fff; border:1px solid #e2e5e9; border-radius:8px; padding:20px; margin-top:12px; box-shadow:0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);">
+    <div style="background:#fff; border:1px solid #e2e5e9; border-radius:8px; padding:20px; margin-top:12px;">
       <canvas id="monthly-chart" height="220"></canvas>
     </div>
 
-    <!-- Comments -->
-    <div class="comments-section" id="comments-page1"></div>
-
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- PAGE: Additional Updates                             -->
-  <!-- ═══════════════════════════════════════════════════ -->
-  <div class="page" id="page-updates">
-    <div class="updates-empty-state">
-      <div class="updates-empty-title">Strategic Finance Updates</div>
-      <p>This section will feature commentary and analysis from Block's strategic finance partners — covering business performance trends, key watch points, and items requiring executive attention.</p>
-      <div class="updates-source">Source: #fpa-ir-planning-reporting</div>
-    </div>
-
-    <!-- Comments -->
-    <div class="comments-section" id="comments-page-updates"></div>
   </div>
 
   <!-- ═══════════════════════════════════════════════════ -->
@@ -873,11 +420,9 @@
   <!-- ═══════════════════════════════════════════════════ -->
   <div class="page" id="page2">
 
-    <div class="preliminary-banner">Preliminary — Under Development</div>
-
     <!-- Key Takeaways -->
     <div class="takeaways">
-      <h3>Key Takeaways <span style="font-weight:400; font-style:italic; font-size:10px; letter-spacing:0.3px; color:#999">Authored by Numerius</span></h3>
+      <h3>Key Takeaways</h3>
       <ul>
         <li id="fwd-takeaway-1"></li>
         <li id="fwd-takeaway-2"></li>
@@ -917,45 +462,23 @@
       Note: Q1'26 figures are based on current pacing; Q2–Q4'26 figures are based on prior forecast.
     </div>
 
-    <!-- Comments -->
-    <div class="comments-section" id="comments-page2"></div>
-
   </div>
-
-  <!-- ═══════════════════════════════════════════════════ -->
-  <!-- PAGE: Constants                                     -->
-  <!-- ═══════════════════════════════════════════════════ -->
-  <div class="page" id="page-consensus"></div>
 
   <!-- ═══ Chart.js ═══ -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
   <!-- ═══ Data ═══ -->
   <script src="dashboard_data.js"></script>
-  <script src="comments_data.js"></script>
-  <script src="directory_data.js"></script>
-  <script src="constants_data.js"></script>
 
   <!-- ═══ Rendering Logic ═══ -->
   <script>
     const D = DASHBOARD_DATA;
-
-    // ─── Comments Config ───
-    const COMMENTS_API_URL = 'https://script.google.com/a/macros/block.xyz/s/AKfycbxhx-b-R9TuuMV7ciPCklSd6hsa0F_VrbynVVI2XbHTJuTLurYICnrLO2LhXbH0Ljw6aw/exec';
 
     // ─── Header ───
     document.getElementById('quarter-badge').textContent = `${D.meta.quarter} ${D.meta.year}`;
     document.getElementById('last-updated').textContent = `Last updated: ${new Date(D.meta.generated_at).toLocaleString()}`;
     if (!D.meta.is_placeholder) {
       document.getElementById('placeholder-badge').style.display = 'none';
-    }
-
-    // ─── Access Logging ───
-    function logAccess(page) {
-      if (!COMMENTS_API_URL) return;
-      var user = localStorage.getItem('dashboard_comment_author') || 'anonymous';
-      var params = new URLSearchParams({ action: 'log', user: user, page: page });
-      new Image().src = COMMENTS_API_URL + '?' + params.toString();
     }
 
     // ─── Tab Navigation ───
@@ -965,7 +488,6 @@
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById(tab.dataset.page).classList.add('active');
-        logAccess(PAGE_LABELS[tab.dataset.page] || tab.dataset.page);
       });
     });
 
@@ -1045,7 +567,7 @@
         if (col === 'Q1 AP') return row.ap;
         if (col === 'Q1 Guidance') return row.guidance || '--';
         if (col === 'vs. Guide') return row.vs_guide || '--';
-        if (col === 'Q1 Constants') return row.consensus || '--';
+        if (col === 'Q1 Consensus') return row.consensus || '--';
         if (col === 'Cons YoY') return row.cons_yoy || '--';
         if (col === 'vs. Cons') return row.vs_cons || row.vs_comp || '--';
         return '--';
@@ -1055,7 +577,7 @@
     // ─── Render Forward-Look Tables ───
     function renderForwardTable(tableId, metric, quarters) {
       const table = document.getElementById(tableId);
-      const cols = ['Quarter', 'Internal Forecast', 'YoY Growth', 'Constants', 'Cons YoY', '$ Delta', 'Growth Delta'];
+      const cols = ['Quarter', 'Internal Forecast', 'YoY Growth', 'Consensus', 'Cons YoY', '$ Delta', 'Growth Delta'];
 
       let html = '<thead><tr>';
       cols.forEach(col => { html += `<th>${col}</th>`; });
@@ -1082,7 +604,7 @@
     // ─── Render AOI Forward Table (margin-based) ───
     function renderAoiForwardTable(tableId, quarters) {
       const table = document.getElementById(tableId);
-      const cols = ['Quarter', 'Internal Forecast', 'Margin', 'Constants', 'Cons Margin', '$ Delta', 'Margin Delta'];
+      const cols = ['Quarter', 'Internal Forecast', 'Margin', 'Consensus', 'Cons Margin', '$ Delta', 'Margin Delta'];
 
       let html = '<thead><tr>';
       cols.forEach(col => { html += `<th>${col}</th>`; });
@@ -1180,30 +702,26 @@
             {
               type: 'bar', label: 'Actual', data: barData,
               backgroundColor: '#1a1a1a', borderColor: '#1a1a1a',
-              borderWidth: 0, borderRadius: 6, order: 2, yAxisID: 'y',
-              barPercentage: 0.75, categoryPercentage: 0.65
+              borderWidth: 1, borderRadius: 4, order: 2, yAxisID: 'y',
+              barPercentage: 0.7, categoryPercentage: 0.6
             },
             {
               type: 'bar', label: 'Plan', data: planBarData,
-              backgroundColor: '#e5e5e5', borderColor: '#d4d4d4',
-              borderWidth: 1, borderRadius: 6, order: 2, yAxisID: 'y',
-              barPercentage: 0.75, categoryPercentage: 0.65
+              backgroundColor: '#d4d4d4', borderColor: '#bbb',
+              borderWidth: 1, borderRadius: 4, order: 2, yAxisID: 'y',
+              barPercentage: 0.7, categoryPercentage: 0.6
             },
             {
               type: 'line', label: lineLabel, data: lineData,
-              borderColor: '#555', borderWidth: 3,
-              pointRadius: 6, pointHoverRadius: 8,
-              pointBackgroundColor: '#fff', pointBorderColor: '#555', pointBorderWidth: 2.5,
-              fill: false, order: 1, yAxisID: 'y1',
-              tension: 0.25
+              borderColor: '#007A33', borderWidth: 2.5, pointRadius: 5,
+              pointBackgroundColor: '#007A33', fill: false, order: 1, yAxisID: 'y1',
+              tension: 0.1
             },
             {
               type: 'line', label: planLabel, data: planLineData,
-              borderColor: '#bbb', borderWidth: 3, borderDash: [6, 4],
-              pointRadius: 6, pointHoverRadius: 8,
-              pointBackgroundColor: '#fff', pointBorderColor: '#bbb', pointBorderWidth: 2.5,
-              pointStyle: 'circle',
-              fill: false, order: 1, yAxisID: 'y1', tension: 0.25
+              borderColor: '#999', borderWidth: 2, borderDash: [6, 3],
+              pointRadius: 4, pointBackgroundColor: '#999', pointStyle: 'circle',
+              fill: false, order: 1, yAxisID: 'y1', tension: 0.1
             }
           ]
         },
@@ -1211,54 +729,29 @@
           responsive: true, maintainAspectRatio: true,
           interaction: { mode: 'index', intersect: false },
           plugins: {
-            legend: {
-              position: 'bottom',
-              labels: {
-                font: { family: 'Inter', size: 13, weight: '600' },
-                usePointStyle: true, pointStyleWidth: 12,
-                padding: 24, color: '#333'
-              }
-            },
+            legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 }, usePointStyle: true, padding: 16 } },
             tooltip: {
-              backgroundColor: '#1a1a1a',
-              titleColor: '#fff',
-              bodyColor: 'rgba(255,255,255,0.85)',
-              borderColor: '#333',
-              borderWidth: 1,
-              padding: { top: 8, bottom: 8, left: 12, right: 12 },
-              cornerRadius: 6,
-              titleFont: { family: 'Inter', size: 11, weight: '600' },
-              bodyFont: { family: 'Inter', size: 11 },
-              bodySpacing: 4,
               callbacks: {
                 label: function(ctx) {
                   const v = ctx.raw;
                   if (v == null) return '';
-                  if (ctx.datasetIndex <= 1) return ' ' + ctx.dataset.label + ': ' + fmtVal(v);
-                  return ' ' + ctx.dataset.label + ': ' + v.toFixed(1) + '%';
+                  if (ctx.datasetIndex <= 1) return `${ctx.dataset.label}: ${fmtVal(v)}`;
+                  return `${ctx.dataset.label}: ${v.toFixed(1)}%`;
                 }
               }
             }
           },
           scales: {
-            x: {
-              grid: { display: false },
-              ticks: { font: { family: 'Inter', size: 14, weight: '600' }, color: '#333' }
-            },
             y: {
-              position: 'left',
-              grid: { color: 'rgba(0,0,0,0.05)' },
-              border: { display: false },
-              title: { display: true, text: unitLabel, font: { family: 'Inter', size: 13, weight: '700' }, color: '#333' },
-              ticks: { font: { family: 'Inter', size: 13 }, color: '#444', padding: 8 }
+              position: 'left', grid: { color: '#f0f0f0' },
+              title: { display: true, text: unitLabel, font: { family: 'Inter', size: 11, weight: '600' }, color: '#666' },
+              ticks: { font: { family: 'Inter', size: 10 }, color: '#888' }
             },
             y1: {
-              position: 'right',
-              grid: { drawOnChartArea: false },
-              border: { display: false },
+              position: 'right', grid: { drawOnChartArea: false },
               min: y1Min, max: y1Max,
-              title: { display: true, text: lineAxisLabel, font: { family: 'Inter', size: 13, weight: '700' }, color: '#333' },
-              ticks: { font: { family: 'Inter', size: 13 }, color: '#444', padding: 8, callback: v => v + '%' }
+              title: { display: true, text: lineAxisLabel, font: { family: 'Inter', size: 11, weight: '600' }, color: '#666' },
+              ticks: { font: { family: 'Inter', size: 10 }, color: '#888', callback: v => v + '%' }
             }
           }
         }
@@ -1325,294 +818,6 @@
         `driven by a margin gap of ${fq[1].aoi.delta_margin} to ${fq[3].aoi.delta_margin} vs. Street expectations. ` +
         `Internal margin of ${fq[1].aoi.margin}–${fq[3].aoi.margin} vs. consensus at ${fq[1].aoi.cons_margin}–${fq[3].aoi.cons_margin}.`;
     }
-    // ─── Comments System ───
-    // Writes go to Google Sheet via Image tag (bypasses CORS).
-    // Reads use localStorage for immediate display + Sheet as source of truth.
-    const PAGE_LABELS = {
-      'page1': 'Q1 Pacing',
-      'page-updates': 'Additional Updates',
-      'page2': 'FY2026 Outlook'
-    };
-
-    // Log initial page load
-    logAccess('Q1 Pacing');
-
-    let commentsCache = {};
-
-    function escapeHtml(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    // Persist comments locally so they survive page reloads
-    function getStoredComments() {
-      try { return JSON.parse(localStorage.getItem('dashboard-comments') || '[]'); }
-      catch (e) { return []; }
-    }
-
-    function storeComment(pageLabel, author, comment) {
-      const stored = getStoredComments();
-      stored.push({
-        timestamp: new Date().toISOString(),
-        page: pageLabel,
-        author: author,
-        comment: comment
-      });
-      localStorage.setItem('dashboard-comments', JSON.stringify(stored));
-    }
-
-    function loadAllComments() {
-      commentsCache = {};
-
-      // 1. Server comments — prefer comments_data.js (refreshed frequently),
-      //    fall back to dashboard_data.js (refreshed weekly)
-      var serverComments = (typeof DASHBOARD_COMMENTS !== 'undefined' && DASHBOARD_COMMENTS.length)
-        ? DASHBOARD_COMMENTS : (D.comments || []);
-      serverComments.forEach(c => {
-        if (!commentsCache[c.page]) commentsCache[c.page] = [];
-        commentsCache[c.page].push(c);
-      });
-
-      // 2. Local comments (posted since last refresh, visible to poster only)
-      getStoredComments().forEach(c => {
-        if (!commentsCache[c.page]) commentsCache[c.page] = [];
-        // Dedup: skip if server already has this comment (match author + text)
-        const isDup = commentsCache[c.page].some(sc =>
-          sc.author === c.author && sc.comment === c.comment
-        );
-        if (!isDup) commentsCache[c.page].push(c);
-      });
-
-      // Sort each page most-recent-first
-      Object.keys(commentsCache).forEach(page => {
-        commentsCache[page].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      });
-    }
-
-    function renderCommentSection(pageId) {
-      const container = document.getElementById('comments-' + pageId);
-      if (!container) return;
-      const savedName = localStorage.getItem('dashboard-comment-name') || '';
-      container.innerHTML = `
-        <div class="comments-header-row">
-          <h3 class="comments-header" style="margin-bottom:0">Discussion</h3>
-          <button class="comment-clear-btn" style="display:none" onclick="clearAllComments()">Clear all</button>
-        </div>
-        <div class="comment-form">
-          <input type="text" placeholder="Your name" class="comment-name-input" value="${escapeHtml(savedName)}">
-          <div class="mention-wrapper">
-            <textarea placeholder="Add a comment..." rows="3" class="comment-text-input"></textarea>
-            <div class="mention-dropdown" style="display:none"></div>
-          </div>
-          <div class="comment-form-hint">Type @ to mention someone</div>
-          <div class="comment-form-actions">
-            <button class="comment-submit-btn" onclick="submitComment('${pageId}')">Post Comment</button>
-            <span class="comment-status"></span>
-          </div>
-        </div>
-        <div class="comments-list"></div>
-      `;
-    }
-
-    function renderComments(pageId) {
-      const listEl = document.querySelector('#comments-' + pageId + ' .comments-list');
-      if (!listEl) return;
-      const comments = commentsCache[PAGE_LABELS[pageId]] || [];
-      if (!comments.length) {
-        listEl.innerHTML = '<div class="comment-empty">No comments yet</div>';
-        return;
-      }
-      listEl.innerHTML = comments.map(c => {
-        const date = new Date(c.timestamp);
-        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          + ' at ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-        return `
-          <div class="comment-item">
-            <div class="comment-meta">
-              <span class="comment-author">${escapeHtml(c.author)}</span>
-              <span class="comment-date">${dateStr}</span>
-            </div>
-            <div class="comment-body">${escapeHtml(c.comment).replace(/@([\w.-]+(?:@[\w.-]+\.\w+)?)/g, '<span class="comment-mention">@$1</span>')}</div>
-          </div>`;
-      }).join('');
-    }
-
-    function submitComment(pageId) {
-      if (!COMMENTS_API_URL) return;
-      const container = document.getElementById('comments-' + pageId);
-      const nameInput = container.querySelector('.comment-name-input');
-      const textInput = container.querySelector('.comment-text-input');
-      const statusEl = container.querySelector('.comment-status');
-      const btn = container.querySelector('.comment-submit-btn');
-
-      const author = nameInput.value.trim();
-      const comment = textInput.value.trim();
-      if (!author || !comment) {
-        statusEl.textContent = 'Name and comment are required';
-        statusEl.style.color = '#CC0000';
-        return;
-      }
-
-      // Save name
-      localStorage.setItem('dashboard-comment-name', author);
-      document.querySelectorAll('.comment-name-input').forEach(el => { el.value = author; });
-      checkAdmin();
-
-      // Send to Google Sheet via Image tag (fire-and-forget, bypasses CORS)
-      const params = new URLSearchParams({
-        action: 'post',
-        page: PAGE_LABELS[pageId],
-        author: author,
-        comment: comment
-      });
-      new Image().src = COMMENTS_API_URL + '?' + params.toString();
-
-      // Store locally and display immediately (optimistic update)
-      storeComment(PAGE_LABELS[pageId], author, comment);
-      loadAllComments();
-      renderComments(pageId);
-
-      textInput.value = '';
-      statusEl.textContent = 'Posted';
-      statusEl.style.color = '#007A33';
-      btn.disabled = true;
-      setTimeout(() => { statusEl.textContent = ''; btn.disabled = false; }, 1500);
-    }
-
-    function clearAllComments() {
-      if (!confirm('Clear all comments across all pages? This cannot be undone.')) return;
-
-      // Clear Google Sheet via Apps Script
-      if (COMMENTS_API_URL) {
-        new Image().src = COMMENTS_API_URL + '?action=clear';
-      }
-
-      // Clear local storage
-      localStorage.removeItem('dashboard-comments');
-
-      // Clear in-memory data so comments don't reappear from cached files
-      if (typeof DASHBOARD_COMMENTS !== 'undefined') DASHBOARD_COMMENTS.length = 0;
-      if (D.comments) D.comments.length = 0;
-
-      commentsCache = {};
-      Object.keys(PAGE_LABELS).forEach(pid => renderComments(pid));
-    }
-
-    // ─── Constants Page (rendered from constants_data.js) ───
-    if (typeof DASHBOARD_CONSTANTS !== 'undefined') {
-      var cn = DASHBOARD_CONSTANTS;
-      var bullet = 'font-size:13px;color:#333;padding-left:16px;position:relative;margin-bottom:4px;';
-      var dot = 'position:absolute;left:0;top:7px;width:5px;height:5px;border-radius:50%;background:#999;';
-      var chtml = '';
-
-      // Header with deck link
-      chtml += '<div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">';
-      chtml += '<div><div class="section-header" style="margin:0;border:none;padding:0;">Constants — Biz Perf</div>';
-      chtml += '<div style="font-size:11px;color:#999;margin-top:4px;">' + escapeHtml(cn.data_thru) + '</div></div>';
-      chtml += '<a href="' + cn.deck_url + '" target="_blank" style="font-size:12px;font-weight:600;color:#1a73e8;text-decoration:none;padding:6px 14px;border:1px solid #1a73e8;border-radius:4px;">Open Full Deck</a>';
-      chtml += '</div>';
-
-      // TL;DR
-      chtml += '<div class="takeaways" style="border-left:3px solid #1a1a1a;">';
-      chtml += '<h3>TL;DR <span style="font-weight:400;font-style:italic;font-size:10px;letter-spacing:0.3px;color:#999">as of ' + cn.as_of + ' &nbsp;|&nbsp; Refreshed each Wednesday</span></h3>';
-      chtml += '<div style="margin-top:12px;">';
-
-      cn.sections.forEach(function(s, i) {
-        var title = escapeHtml(s.title).replace('/', ' / ');
-        chtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#1a1a1a;margin-bottom:6px;">' + title + '</div>';
-        chtml += '<ul style="list-style:none;margin-bottom:' + (i < cn.sections.length - 1 ? '16px' : '0') + ';">';
-        s.items.forEach(function(item) {
-          chtml += '<li style="' + bullet + '"><span style="' + dot + '"></span>' + escapeHtml(item) + '</li>';
-        });
-        chtml += '</ul>';
-      });
-
-      chtml += '</div></div>';
-      document.getElementById('page-consensus').innerHTML = chtml;
-    }
-
-    // ─── @Mention Autocomplete ───
-    function initMentionAutocomplete(container) {
-      var textarea = container.querySelector('.comment-text-input');
-      var dropdown = container.querySelector('.mention-dropdown');
-      if (!textarea || !dropdown) return;
-      var dir = (typeof DASHBOARD_DIRECTORY !== 'undefined') ? DASHBOARD_DIRECTORY : [];
-
-      textarea.addEventListener('input', function() {
-        var val = this.value;
-        var pos = this.selectionStart;
-        var before = val.substring(0, pos);
-
-        // Find the last @ that starts a mention (at start or after whitespace)
-        var atIndex = -1;
-        for (var i = before.length - 1; i >= 0; i--) {
-          if (before[i] === '@' && (i === 0 || /\s/.test(before[i - 1]))) {
-            atIndex = i;
-            break;
-          }
-          if (/\s/.test(before[i])) break;
-        }
-
-        if (atIndex === -1) { dropdown.style.display = 'none'; return; }
-
-        var query = before.substring(atIndex + 1).toLowerCase();
-        var matches = dir.filter(function(d) {
-          return d.name.toLowerCase().includes(query) || d.alias.toLowerCase().includes(query);
-        });
-        if (query.length === 0) matches = dir;
-        if (matches.length === 0) { dropdown.style.display = 'none'; return; }
-
-        dropdown.innerHTML = matches.map(function(d) {
-          return '<div class="mention-item" data-alias="' + escapeHtml(d.alias) + '">'
-            + '<span class="mention-item-name">' + escapeHtml(d.name) + '</span>'
-            + '<span class="mention-item-alias">@' + escapeHtml(d.alias) + '</span>'
-            + '</div>';
-        }).join('');
-        dropdown.style.display = 'block';
-
-        dropdown.querySelectorAll('.mention-item').forEach(function(item) {
-          item.addEventListener('mousedown', function(e) {
-            e.preventDefault();
-            var alias = this.getAttribute('data-alias');
-            var after = val.substring(pos);
-            textarea.value = before.substring(0, atIndex) + '@' + alias + ' ' + after;
-            textarea.selectionStart = textarea.selectionEnd = atIndex + alias.length + 2;
-            dropdown.style.display = 'none';
-            textarea.focus();
-          });
-        });
-      });
-
-      textarea.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') dropdown.style.display = 'none';
-      });
-      textarea.addEventListener('blur', function() {
-        setTimeout(function() { dropdown.style.display = 'none'; }, 150);
-      });
-    }
-
-    // Admin control — only admins see "Clear all"
-    var COMMENT_ADMINS = ['nmart', 'nick martin'];
-
-    function checkAdmin() {
-      var name = (localStorage.getItem('dashboard-comment-name') || '').toLowerCase().trim();
-      var isAdmin = COMMENT_ADMINS.indexOf(name) !== -1;
-      document.querySelectorAll('.comment-clear-btn').forEach(function(btn) {
-        btn.style.display = isAdmin ? '' : 'none';
-      });
-    }
-
-    // Initialize
-    Object.keys(PAGE_LABELS).forEach(pid => renderCommentSection(pid));
-    loadAllComments();
-    Object.keys(PAGE_LABELS).forEach(pid => renderComments(pid));
-    // Wire up autocomplete on each comment section
-    Object.keys(PAGE_LABELS).forEach(pid => {
-      var c = document.getElementById('comments-' + pid);
-      if (c) initMentionAutocomplete(c);
-    });
-    checkAdmin();
   </script>
 </body>
 </html>

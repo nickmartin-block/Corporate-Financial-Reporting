@@ -24,6 +24,42 @@ cd ~/skills/gdrive && uv run gdrive-cli.py auth status
 
 If auth fails, stop and ask user to re-authenticate.
 
+## Step 1b: Fetch MCP Actuals (Governance)
+
+Before reading sheets, fetch verified prior-year actuals from Block Data MCP and write to `/tmp/mcp_actuals.json`. This allows refresh.py to use MCP-verified values instead of hard-coded fallbacks.
+
+Use `mcp__blockdata__fetch_metric_data` to fetch:
+
+1. **Q1 2024 Block Gross Profit** — metric: `financial__profit_and_loss__pnl_gross_profit_actual`, granularity: `quarter`, start: `2024-01-01`, end: `2024-03-31`
+2. **Q1 2025 Block Gross Profit** — same metric, start: `2025-01-01`, end: `2025-03-31`
+3. **Q1 2025 AOI** — metric: `financial__profit_and_loss__adjusted_operating_income_actual`, start: `2025-01-01`, end: `2025-03-31`
+4. **Jan/Feb 2026 Block GP actuals** — metric: `financial__profit_and_loss__pnl_gross_profit_actual`, granularity: `month`, start: `2026-01-01`, end: `2026-02-28`
+5. **Jan/Feb 2026 AOI actuals** — metric: `financial__profit_and_loss__adjusted_operating_income_actual`, same range
+6. **Q2-Q4 GP forecast** — metric: `financial__profit_and_loss__pnl_gross_profit_outlook`, granularity: `quarter`, start: `2026-04-01`, end: `2026-12-31`, filters: `{"scenario": "2026 Annual Plan"}`
+7. **Q2-Q4 AOI forecast** — same pattern with `adjusted_operating_income_outlook`
+
+Write results to `/tmp/mcp_actuals.json`:
+```json
+{
+  "Q1_2024_GP": <value in USD>,
+  "Q1_2025_GP": <value in USD>,
+  "Q1_2025_AOI": <value in USD>,
+  "monthly_gp_m1": <Jan 2026 GP in millions>,
+  "monthly_gp_m2": <Feb 2026 GP in millions>,
+  "monthly_aoi_m1": <Jan 2026 AOI in millions>,
+  "monthly_aoi_m2": <Feb 2026 AOI in millions>,
+  "forecast_gp_q2": <Q2 GP in millions>,
+  "forecast_gp_q3": <Q3 GP in millions>,
+  "forecast_gp_q4": <Q4 GP in millions>,
+  "forecast_aoi_q2": <Q2 AOI in millions>,
+  "forecast_aoi_q3": <Q3 AOI in millions>,
+  "forecast_aoi_q4": <Q4 AOI in millions>,
+  "fetched_at": "<ISO timestamp>"
+}
+```
+
+If any MCP call fails, log the error and proceed — refresh.py will fall back to hard-coded constants and validate.py will skip MCP cross-checks. Do not block the pipeline on MCP availability.
+
 ## Step 2: Read Pacing Sheet + Extract Commentary (parallel)
 
 **Run both of these concurrently** — the pacing sheet read and the Innercore commentary extraction are independent data sources. The commentary only needs the Doc ID (not the pacing data), and produces `/tmp/commentary.json` which is consumed later in Step 9.
@@ -196,9 +232,11 @@ Run the refresh script to generate `dashboard_data.js` (reads pacing sheet, corp
 cd ~/Desktop/Nick's\ Cursor/Pacing\ Dashboard && python3 refresh.py
 ```
 
-## Step 9: Sync index.html
+## Step 9: Verify index.html exists
 
-Copy `dashboard.html` → `index.html` so Block Cell serves the page correctly (Block Cell does not auto-resolve `/` to `/index.html`).
+**DO NOT copy `dashboard.html` → `index.html`.** The production `index.html` has evolved beyond `dashboard.html` and contains additional tabs (Quarterly Pacing, Additional Updates, Constants, FY2026 Outlook) that `dashboard.html` does not have. Overwriting it will destroy those pages.
+
+Instead, verify that `index.html` exists in the Pacing Dashboard directory. If it is missing, download the current site from Block Cell (`manage_site` → `download_site`) and restore `index.html` from there.
 
 ## Step 10: Validate
 

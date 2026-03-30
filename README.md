@@ -1,47 +1,122 @@
-# Block FP&A Reporting — Automation
+# Numerius — Block Financial Reporting Agent
 
-Automated financial reporting for Block FP&A using Claude Code. Single slash commands that generate, publish, and validate management reports from governed spreadsheet data.
+Numerius is Block's financial reporting agent. It automates the production, publication, and validation of the CFO's core financial deliverables — sourcing governed data, enforcing formatting standards, and validating every output before delivery.
+
+The system is built as a collection of Claude Code skills, each mapped to a specific deliverable. Two governing documents sit at the repo root and apply to every skill:
+
+- **[`numerius.md`](numerius.md)** — Agent identity, non-negotiable principles, 5-phase workflow, deliverable registry
+- **[`financial-reporting.md`](financial-reporting.md)** — Global formatting recipe: rounding, signs, product names, terminology, style rules
 
 ---
 
-## Reports
+## Deliverables
 
-### Weekly Performance Digest (`/weekly-summary`)
+### Weekly Performance Digest — `automated`
 
-Generates the weekly Block Performance Digest with emoji-coded narrative, detailed overview sections, and formatted performance tables. Pulls from the master pacing sheet and Slack digests, publishes to a dated Google Doc tab, and validates every table cell against the source.
+The Tuesday leadership share. Emoji-coded performance narrative with 5 formatted tables covering gross profit, AOI, Cash App inflows, and Square GPV. Published to Google Docs with cell-level validation.
 
-**Pipeline:** Auth → Sheet read → Slack digest scan → Generate commentary → Save .md → Publish to Google Doc (populate template tables via batch-update, insert commentary, format) → Validate (299 cells) → Slack notification with key takeaways
+| Command | What it does |
+|---------|-------------|
+| `/weekly-summary` | End-to-end: sheet read → narrative → publish → validate |
+| `/weekly-tables` | Populate 5 pre-formatted template tables via Docs API batch-update |
+| `/weekly-validate` | Cell-by-cell validation of published doc against source sheet |
 
-**Pre-requisite:** Before running, duplicate the template tab in the [Weekly Performance Digest Google Doc](https://docs.google.com/document/d/1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0) and rename it to the current week's date (M/D format, e.g., `3/31`). The template tab contains pre-formatted tables with row/column labels and styling — the skill populates values and inserts commentary around them.
+**Pre-requisite:** Before running, duplicate the template tab in the [Weekly Performance Digest Google Doc](https://docs.google.com/document/d/1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0) and rename it to the current week's date (M/D format, e.g., `3/31`).
 
-See [`skills/weekly-reporting/`](skills/weekly-reporting/) for full details.
+### Monthly Topline Flash — `automated`
 
-### Monthly Topline Flash (`/monthly-flash`)
+Preliminary month-end close results. 21 metrics across gross profit, volume, and profitability — all validated against the MRP Charts & Tables sheet (106 values checked). Adapts format for intra-quarter months vs. quarter-end.
 
-Generates the monthly topline flash email with preliminary close results. Covers 21 metrics across gross profit, volume, and profitability — all validated against the MRP Charts & Tables sheet (106 values checked).
+| Command | What it does |
+|---------|-------------|
+| `/monthly-flash` | End-to-end: sheet read → narrative → publish → validate |
+| `/monthly-validate` | Metric-by-metric validation of published doc against source |
 
-See [`skills/monthly-flash/`](skills/monthly-flash/) for full details.
+### Monthly Management Reporting Pack — `preliminary`
+
+The monthly MRP delivered to the CFO and senior leadership. Full P&L narrative with brand breakouts (Cash App, Square, Other Brands), operating expense detail, and flux commentary. Data sourced from the Block Metric Store via Block Data MCP, with driver narratives pulled from the flux commentary sheet.
+
+| Command | What it does |
+|---------|-------------|
+| `/mrp-data` | Fetch all metrics from Block Data MCP → structured JSON data packet |
+| `/mrp` | Full pipeline: data fetch → parallel narrative generation → publish → validate |
+| `/mrp-validate` | Post-publish validation against data packet and optional reference MRP |
+
+Skills are built and functional. Pipeline is under iteration as we refine the narrative structure and flux commentary integration.
+
+### Board of Directors Pre-Read — `planned`
+
+The quarterly board pre-read covering financial highlights, key watchpoints, quarterly and full-year performance, annual plan overview, and competitive landscape. This is the most narrative-heavy deliverable — Numerius will handle metric population, table generation, and formatting, while strategic commentary and watchpoints remain human-authored.
+
+No skills built yet. The global recipe and agent definition already cover the formatting and terminology standards this deliverable requires.
+
+### Pacing Dashboard — `automated`
+
+Live quarterly pacing dashboard deployed to Block Cell. Shows current-quarter pacing vs. guidance, consensus, and annual plan with week-over-week deltas, scorecard signals, and key takeaways extracted from the Innercore doc.
+
+| Command | What it does |
+|---------|-------------|
+| `/dashboard-refresh` | Read sheets + Block Data MCP → generate data files → validate → deploy to Block Cell |
+
+### Audit — `automated`
+
+Independent audit layer that checks reporting workflows for latency, data integrity, and cross-workflow consistency.
+
+| Command | What it does |
+|---------|-------------|
+| `/audit` | Full pipeline audit: latency + validation + cross-workflow consistency |
+| `/audit-workflow <name>` | Focused audit on a single workflow |
 
 ---
 
 ## Architecture
 
 ```
-skills/
-  ├── weekly-reporting/              Weekly Performance Digest
-  │   ├── commands/                    /weekly-summary, /weekly-tables, /weekly-validate
-  │   ├── skills/                      Formatting recipe, table specs, validation logic
-  │   └── gdrive/                      Google Drive CLI (shared tool)
-  │
-  └── monthly-flash/                 Monthly Topline Flash
-      ├── commands/                    /monthly-flash
-      └── skills/                      Formatting recipe (inherited)
+Corporate-Financial-Reporting/
+│
+├── numerius.md                      Agent identity & operating manual
+├── financial-reporting.md           Global formatting recipe (v1.3.0)
+│
+├── skills/
+│   ├── weekly-reporting/            Weekly Performance Digest
+│   │   ├── commands/                  /weekly-summary, /weekly-tables, /weekly-validate
+│   │   ├── skills/                    Table specs, validation logic, formatting recipe
+│   │   └── gdrive/                    Google Drive CLI (shared tool)
+│   │
+│   ├── monthly-flash/               Monthly Topline Flash
+│   │   ├── commands/                  /monthly-flash, /monthly-validate
+│   │   └── skills/                    Formatting recipe (inherited)
+│   │
+│   ├── monthly-reporting-pack/      Monthly Management Reporting Pack
+│   │   ├── commands/                  /mrp, /mrp-data, /mrp-validate
+│   │   └── skills/                    MRP-specific logic, data packet schema
+│   │
+│   ├── pacing-dashboard/            Pacing Dashboard
+│   │   └── commands/                  /dashboard-refresh
+│   │
+│   └── audit/                       Audit Layer
+│       ├── commands/                  /audit, /audit-workflow
+│       └── skills/                    Workflow registry, check definitions
+│
+└── pacing-dashboard/                Dashboard static site (HTML/CSS/JS)
 ```
 
-Both reporting systems share:
-- **`financial-reporting.md`** — global formatting recipe (rounding, signs, comparison framework, deviation handling)
+### Shared infrastructure
+
+All skills inherit from the two root-level governing documents and share:
+
+- **`financial-reporting.md`** — Formatting recipe: rounding, signs, comparison framework, product names, terminology, deviation handling
 - **`gdrive-cli.py`** — CLI tool for Google Sheets, Docs, and Slides operations
-- **Validation pattern** — independent re-read of source data, normalize + compare with rounding tolerance, PASS/FAIL report
+- **Block Data MCP** — Governed metric access via the Block Metric Store
+- **Validation pattern** — Every deliverable gets a post-publish validation pass: independent re-read of source data, normalize + compare with rounding tolerance, PASS/FAIL report
+
+### 5-phase workflow
+
+Every command follows the same phased workflow. Each phase has an explicit gate — no phase may be skipped. See [`numerius.md`](numerius.md) for full details.
+
+```
+Source → Validate Source → Populate → Review → Deliver & Validate
+```
 
 ---
 
@@ -72,5 +147,8 @@ Both reporting systems share:
    - Run `/weekly-summary`
 3. For monthly flash:
    - Run `/monthly-flash`
+4. For MRP:
+   - Run `/mrp-data` to fetch and inspect the data packet
+   - Run `/mrp` for the full pipeline
 
-Both commands handle auth, data extraction, narrative generation, Google Doc publishing, and validation end-to-end.
+All commands handle auth, data extraction, formatting, publishing, and validation end-to-end.

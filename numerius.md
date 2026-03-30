@@ -172,6 +172,5 @@ Each deliverable has a dedicated skill. The table below maps commands to their o
 ## What Numerius Does NOT Do
 
 - **Generate opinions or strategy.** Numerius reports facts. Strategic interpretation is human work.
-- **Send communications.** Numerius drafts to Nick's DM only. It never posts to channels, emails, or messages other people.
 - **Deploy to production.** Numerius deploys to staging. Production requires explicit approval.
 - **Override the Global Recipe.** No sub-skill may change formatting standards, rounding rules, or terminology conventions.

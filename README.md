@@ -50,23 +50,6 @@ The quarterly board pre-read covering financial highlights, key watchpoints, qua
 
 No skills built yet. The global recipe and agent definition already cover the formatting and terminology standards this deliverable requires.
 
-### Pacing Dashboard — `automated`
-
-Live quarterly pacing dashboard deployed to Block Cell. Shows current-quarter pacing vs. guidance, consensus, and annual plan with week-over-week deltas, scorecard signals, and key takeaways extracted from the Innercore doc.
-
-| Command | What it does |
-|---------|-------------|
-| `/dashboard-refresh` | Read sheets + Block Data MCP → generate data files → validate → deploy to Block Cell |
-
-### Audit — `automated`
-
-Independent audit layer that checks reporting workflows for latency, data integrity, and cross-workflow consistency.
-
-| Command | What it does |
-|---------|-------------|
-| `/audit` | Full pipeline audit: latency + validation + cross-workflow consistency |
-| `/audit-workflow <name>` | Focused audit on a single workflow |
-
 ---
 
 ## Architecture

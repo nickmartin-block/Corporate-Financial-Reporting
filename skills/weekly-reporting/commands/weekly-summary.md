@@ -2,7 +2,7 @@
 
 Generate a management-ready Block Performance Digest combining pacing metrics with Cash App commentary from Slack. The output has two layers: a **Summary** (comprehensive emoji-coded narrative) and **Overview** sections (plain-text reference detail, with performance tables).
 
-**Dependencies:** Read `~/skills/weekly-reporting/skills/financial-reporting.md` for global formatting standards. Read `~/skills/weekly-reporting/skills/weekly-tables.md` for the table population logic (batch-update approach — tables are pre-formatted in the template tab, not generated as markdown).
+**Dependencies:** Read `~/skills/weekly-reporting/skills/financial-reporting.md` for global formatting standards. Table population, conditional colors, and formatting are handled by Python scripts in `~/skills/weekly-reporting/scripts/` — see Step 5b.
 
 **Template tab requirement:** Nick must create the template tab in the Google Doc before running this command. The template tab contains headings and pre-formatted tables with empty data cells. See weekly-tables.md for template structure details.
 
@@ -299,23 +299,37 @@ The agent receives:
 - **Doc ID:** `1FU4In29vR_1pvGy1VyIeDTCbglBQ6DvKWKE1wI18Rv0`
 - **Tab ID:** from Step 5a
 - **Commentary .md path:** from Step 4
-- **Table mapping:** `~/skills/weekly-reporting/skills/weekly-tables.md`
+- **Python scripts:** `~/skills/weekly-reporting/scripts/` (populate_tables.py, apply_colors.py, format_doc.py)
 
 The agent executes these phases in order:
 
 ---
 
-**Phase 1 — Populate tables**
+**Phase 1 — Populate tables + conditional colors (Python)**
 
-Follow the procedure in `~/skills/weekly-reporting/skills/weekly-tables.md` (integrated mode):
+Three Python scripts handle table values and colors. All output `{"requests": [...]}` JSON to stdout, piped to `docs batch-update`.
 
-1. Read sheet data from the cached temp file (no API call)
-2. Read the Doc template structure via `docs get --include-tabs`
-3. Navigate to the target tab. Find all 5 tables, extract cell positions (`startIndex` for each data cell)
-4. Map Sheet values to Doc cells using the column/row mapping in weekly-tables.md
-5. Build batch-update JSON: for each cell (sorted by startIndex descending), create `insertText` + `updateTextStyle` (Roboto 10pt) + `updateParagraphStyle` (CENTER) requests
-6. Execute the batch-update
-7. Re-read Doc structure, then apply conditional colors on Delta vs. AP rows (green `#007A33` for positive, red `#CC0000` for negative)
+```bash
+# 1. Read Doc tab (filtered — ~3MB instead of ~80MB)
+cd ~/skills/gdrive && uv run gdrive-cli.py docs get DOC_ID --tab TAB_ID > /tmp/doc_tab.json
+
+# 2. Generate table population batch (299 cells, ~1200 requests, <1s)
+cd ~/skills/weekly-reporting/scripts && python3 populate_tables.py /tmp/pacing_sheet_YYYY-MM-DD.json /tmp/doc_tab.json TAB_ID > /tmp/table_batch.json
+
+# 3. Apply table values
+cat /tmp/table_batch.json | (cd ~/skills/gdrive && uv run gdrive-cli.py docs batch-update DOC_ID)
+
+# 4. Re-read Doc tab (indices shifted after table insertion)
+cd ~/skills/gdrive && uv run gdrive-cli.py docs get DOC_ID --tab TAB_ID > /tmp/doc_post_tables.json
+
+# 5. Generate conditional color batch (green positive / red negative on Delta rows)
+cd ~/skills/weekly-reporting/scripts && python3 apply_colors.py /tmp/doc_post_tables.json TAB_ID > /tmp/color_batch.json
+
+# 6. Apply colors
+cat /tmp/color_batch.json | (cd ~/skills/gdrive && uv run gdrive-cli.py docs batch-update DOC_ID)
+```
+
+Check stderr output from each script for cell/request counts. If any script exits non-zero, stop and report the error.
 
 ---
 
@@ -323,7 +337,7 @@ Follow the procedure in `~/skills/weekly-reporting/skills/weekly-tables.md` (int
 
 Insert the commentary (from the .md file) into the template tab at the correct positions between headings and tables. Since commentary insertion shifts indices, process sections in **reverse document order** (bottom-to-top).
 
-1. Re-read the Doc structure via `docs get --include-tabs` (indices shifted from Phase 1)
+1. Re-read the Doc tab via `docs get DOC_ID --tab TAB_ID` (indices shifted from Phase 1)
 2. Build an insertion map — for each section, identify the heading's `endIndex`:
 
 | Section | Heading Text to Match | Insert After |
@@ -345,53 +359,22 @@ echo '<SECTION_MARKDOWN>' | (cd ~/skills/gdrive && uv run gdrive-cli.py docs ins
 
 ---
 
-**Phase 3 — Format**
+**Phase 3 — Format (Python)**
 
-After all commentary is inserted, apply formatting. Re-read the Doc structure once via `docs get --include-tabs`, then build all formatting requests and execute as batch updates.
+After all commentary is inserted, run the formatting script. It handles font size, line spacing, bullet nesting, bold labels, placeholder highlights, and table bullet cleanup — all in one pass.
 
-**3a. Font size 10pt + line spacing 1.15:**
+```bash
+# 1. Re-read Doc tab (indices shifted after commentary insertion)
+cd ~/skills/gdrive && uv run gdrive-cli.py docs get DOC_ID --tab TAB_ID > /tmp/doc_post_commentary.json
 
-For every `NORMAL_TEXT` paragraph outside tables:
-```json
-{"updateTextStyle": {"textStyle": {"fontSize": {"magnitude": 10, "unit": "PT"}}, "fields": "fontSize", "range": {"startIndex": START, "endIndex": END, "tabId": "TAB_ID"}}}
+# 2. Generate formatting batch
+cd ~/skills/weekly-reporting/scripts && python3 format_doc.py /tmp/doc_post_commentary.json TAB_ID > /tmp/format_batch.json
+
+# 3. Apply formatting
+cat /tmp/format_batch.json | (cd ~/skills/gdrive && uv run gdrive-cli.py docs batch-update DOC_ID)
 ```
-```json
-{"updateParagraphStyle": {"paragraphStyle": {"lineSpacing": 115, "spaceAbove": {"magnitude": 0, "unit": "PT"}, "spaceBelow": {"magnitude": 0, "unit": "PT"}}, "fields": "lineSpacing,spaceAbove,spaceBelow", "range": {"startIndex": START, "endIndex": END, "tabId": "TAB_ID"}}}
-```
 
-**3b. Fix bullet nesting:**
-
-**CRITICAL: Only modify paragraphs OUTSIDE of tables.** Track whether you are inside a `table` element. Skip ALL table cell paragraphs. When computing ranges for `createParagraphBullets`, ensure the range ends BEFORE the next table's startIndex.
-
-1. Identify each bullet section by scanning paragraph text for known labels
-2. `deleteParagraphBullets` on each section range
-3. `insertText` `\t` (level 1) or `\t\t` (level 2) at sub-item starts (process in **reverse index order**):
-
-**Summary sub-items:**
-- Level 1 (`\t`): US GPV, International GPV, Lending vs. Non-Lending, Inflows Framework, Inflows (vs. AP), Monetization rate (vs. AP)
-- Level 2 (`\t\t`): Lending (vs. AP), Non-Lending (vs. AP), Actives, Inflows per active, Monetization rate
-
-**Overview GP sub-items (level 1):** Cash App GP, Square GP, Proto GP, TIDAL GP
-**Overview AOI sub-items (level 1):** "We expect to achieve" and "For the quarter, the business"
-**Overview Square GPV sub-items (level 1):** US GPV, International GPV, GPV to GP Spread
-
-4. `createParagraphBullets` with `BULLET_DISC_CIRCLE_SQUARE` preset. **Range MUST end before the next table startIndex.**
-
-**3c. Bold metric labels in overview commentary:**
-
-Apply `bold: true` to metric names only (not "is pacing to..." text). Labels: Block gross profit, Cash App gross profit, Square gross profit, Proto gross profit, TIDAL gross profit, Adjusted Operating Income, Rule of 40/46/49/50, Actives, Inflows per active, Monetization rate, Inflows, Global GPV, US GPV, International GPV, GPV to GP Spread. **Only non-table paragraphs.**
-
-**3d. Yellow highlight on placeholders:**
-
-Find text containing `[MANUAL`, `[DATA MISSING`, or `[Cash App WoW` and apply yellow background (`rgbColor: {red: 1.0, green: 0.95, blue: 0.0}`).
-
-**3e. Enforce Summary spacing:**
-
-Verify non-bulleted blank paragraphs exist between: (1) Topline and first bullet, (2) last bullet (Proto) and Profitability. Insert if missing. Remove bullet formatting from these spacer paragraphs.
-
-**3f. Post-bullet table safety check:**
-
-Re-read Doc. Scan ALL table cell paragraphs for `bullet` property. Remove any stray bullets with `deleteParagraphBullets`.
+The script applies: 10pt font + 1.15 line spacing on all non-table paragraphs, bullet nesting (levels 0/1/2 based on known labels), bold metric labels, yellow highlight on `[MANUAL`/`[DATA MISSING`/`[Cash App WoW` placeholders, and removes stray bullets from table cells. Check stderr for request counts by category.
 
 ### Error handling
 

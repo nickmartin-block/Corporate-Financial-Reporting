@@ -48,15 +48,3 @@ Deploy to staging (Nick's iteration app):
 # Update build/app.yaml: app_id → finance-copilot, owner → nmart
 # Deploy via Block App Kit MCP deploy_site tool
 ```
-
-## Relationship to finance-copilot-v2
-
-This is Nick's iteration fork of `finance-copilot-v2` (owned by Beckman in squareup/g2-apps). Changes are developed and tested here, then PRed back to the canonical app via squareup/g2-apps.
-
-| | This repo | squareup/g2-apps |
-|---|-----------|-----------------|
-| App ID | `finance-copilot` | `finance-copilot-v2` |
-| Owner | nmart | beckman |
-| Deploy access | Nick (direct) | Beckman only |
-| Purpose | Iteration sandbox | Production canonical |
-| Staging URL | g2.stage.sqprod.co/apps/finance-copilot | g2.stage.sqprod.co/apps/finance-copilot-v2 |

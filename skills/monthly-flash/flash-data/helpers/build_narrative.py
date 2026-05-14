@@ -98,8 +98,14 @@ def combine(pct: str, dollar: str) -> str:
 
 def variance_phrase(pct: str, dollar: str, bench: str) -> str:
     """Build "+X% (+$Y) above bench" or "-X% (-$Y) below bench".
-    Direction inferred from the sign of pct (falls back to dollar). Empty → "vs. {bench}".
+    Direction inferred from sign. When pct and dollar disagree on sign — typical when
+    base is negative (e.g. Proto GP) — fall back to dollar only since pct is unreliable.
     """
+    if pct and dollar:
+        pct_neg = pct.startswith("-") or pct.startswith("(")
+        dollar_neg = dollar.startswith("-") or dollar.startswith("(")
+        if pct_neg != dollar_neg:
+            pct = ""  # drop pct, use dollar only
     body = combine(pct, dollar)
     if not body:
         return f"vs. {bench}"
@@ -147,16 +153,13 @@ def _half_up(x: float) -> int:
 
 
 def fmt_driver_delta(d: float) -> str:
-    """Format a $ delta for driver call-out per the ±10 rule.
-    Explicit +/- sign, no parens for negatives (per Flash format).
-    - |Δ| ≤ $10M → 1 decimal in $M (e.g. "+$5.8M")
+    """Format a $ delta in $M per the ±10 rule. Explicit +/- sign, no parens.
+    - |Δ| ≤ $10M → 1 decimal in $M (e.g. "+$5.8M", "-$0.5M")
     - |Δ| >  $10M → integer in $M  (e.g. "+$18M", "-$26M")
-    - |Δ| < $1M  → $K integer      (e.g. "+$199K") — preserves clarity for tiny drivers
+    Always $M units (matches Flash style — no $K fallback for sub-$1M values).
     """
     abs_v = abs(d)
     sign = "+" if d >= 0 else "-"
-    if abs_v < 1_000_000:
-        return f"{sign}${_half_up(abs_v / 1_000)}K"
     millions = abs_v / 1_000_000
     if millions <= PRECISION_RULE_THRESHOLD:
         return f"{sign}${millions:.1f}M"
@@ -333,43 +336,48 @@ def build_narrative(packet: dict, period: str, ol_label: str, ol_year: int) -> s
     YOY_COLS = {YOY, PMYOY}
 
     def v(metric: str, col: int) -> str:
-        """Narrative-form variance value: signed +/-, precision rule applied."""
+        """Narrative-form variance value: signed +/-, precision rule applied.
+        Same rule used for YoY columns per Flash convention (e.g. '+23% YoY', '+2.0% YoY').
+        """
         raw_val = f(metric, col)
-        if col in VARIANCE_COLS:
+        if col in VARIANCE_COLS or col in YOY_COLS:
             return to_narrative_sign(reformat_variance(raw_val))
-        if col in YOY_COLS:
-            return force_signed(raw_val)
         return raw_val
 
-    # Brand bridge — short form: "(Cash App +$X, Square -$Y, Other Brands +$Z)"
-    def _delta_ap(metric: str) -> float:
+    # Primary comparison anchor: OL during the active outlook quarter (Q2/Q3/Q4),
+    # AP only during Q1 (where AP == Q1's plan). The OL label is passed in via
+    # --ol-label. We use OL deltas everywhere as the primary anchor; AP appears
+    # supplementally on Adj Opex + R40 (per Flash convention).
+    def _delta(metric: str, scenario: str) -> float:
+        """scenario ∈ {'ol', 'ap'}. Returns actual - scenario_value, or 0 if missing."""
         actual = raw.get(f"{metric}_actual")
-        ap = raw.get(f"{metric}_ap")
-        if actual is None or ap is None:
+        target = raw.get(f"{metric}_{scenario}")
+        if actual is None or target is None:
             return 0.0
-        return actual - ap
+        return actual - target
 
-    ca_ap_d_raw = _delta_ap("cash_app_gp")
-    sq_ap_d_raw = _delta_ap("square_gp")
-    tidal_ap_d_raw = _delta_ap("tidal_gp")
-    proto_ap_d_raw = _delta_ap("proto_gp")
-    other_brands_raw = tidal_ap_d_raw + proto_ap_d_raw
+    # Brand bridge uses OL deltas (matches the primary anchor on the Block GP line).
+    ca_ol_d_raw = _delta("cash_app_gp", "ol")
+    sq_ol_d_raw = _delta("square_gp", "ol")
+    tidal_ol_d_raw = _delta("tidal_gp", "ol")
+    proto_ol_d_raw = _delta("proto_gp", "ol")
+    other_brands_raw = tidal_ol_d_raw + proto_ol_d_raw
     brand_bridge = (
-        f"Cash App {fmt_driver_delta(ca_ap_d_raw)}, "
-        f"Square {fmt_driver_delta(sq_ap_d_raw)}, "
+        f"Cash App {fmt_driver_delta(ca_ol_d_raw)}, "
+        f"Square {fmt_driver_delta(sq_ol_d_raw)}, "
         f"Other Brands {fmt_driver_delta(other_brands_raw)}"
     )
 
     # AOI margin (vs Block GP, per Flash convention)
     aoi_margin = margin_pct(raw.get("adj_oi_actual"), raw.get("block_gp_actual"))
 
-    # Cash App sub-product outperformance
+    # Sub-product attribution: ranked by OL delta (positive first, negatives "partially offset")
     ca_subs = [
-        ("Commerce", raw.get("commerce_gp_actual", 0) - raw.get("commerce_gp_ap", 0)),
-        ("Borrow", raw.get("borrow_gp_actual", 0) - raw.get("borrow_gp_ap", 0)),
-        ("Cash App Card", raw.get("cash_app_card_gp_actual", 0) - raw.get("cash_app_card_gp_ap", 0)),
-        ("Instant Deposit", raw.get("instant_deposit_gp_actual", 0) - raw.get("instant_deposit_gp_ap", 0)),
-        ("Post-Purchase BNPL", raw.get("post_purchase_bnpl_gp_actual", 0) - raw.get("post_purchase_bnpl_gp_ap", 0)),
+        ("Commerce", _delta("commerce_gp", "ol")),
+        ("Borrow", _delta("borrow_gp", "ol")),
+        ("Cash App Card", _delta("cash_app_card_gp", "ol")),
+        ("Instant Deposit", _delta("instant_deposit_gp", "ol")),
+        ("Post-Purchase BNPL", _delta("post_purchase_bnpl_gp", "ol")),
     ]
     ca_pos = sorted([s for s in ca_subs if s[1] > 0], key=lambda s: s[1], reverse=True)
     ca_neg = sorted([s for s in ca_subs if s[1] < 0], key=lambda s: s[1])
@@ -384,13 +392,12 @@ def build_narrative(packet: dict, period: str, ol_label: str, ol_year: int) -> s
         ca_outperf.append("partially offset by " + fmt_sub(ca_neg))
     ca_outperf_phrase = "; ".join(ca_outperf)
 
-    # Square sub-product outperformance
     sq_subs = [
-        ("US Payments", raw.get("us_payments_gp_actual", 0) - raw.get("us_payments_gp_ap", 0)),
-        ("INTL Payments", raw.get("intl_payments_gp_actual", 0) - raw.get("intl_payments_gp_ap", 0)),
-        ("Banking", raw.get("banking_gp_actual", 0) - raw.get("banking_gp_ap", 0)),
-        ("SaaS", raw.get("saas_gp_actual", 0) - raw.get("saas_gp_ap", 0)),
-        ("Hardware", raw.get("hardware_gp_actual", 0) - raw.get("hardware_gp_ap", 0)),
+        ("US Payments", _delta("us_payments_gp", "ol")),
+        ("INTL Payments", _delta("intl_payments_gp", "ol")),
+        ("Banking", _delta("banking_gp", "ol")),
+        ("SaaS", _delta("saas_gp", "ol")),
+        ("Hardware", _delta("hardware_gp", "ol")),
     ]
     sq_pos = sorted([s for s in sq_subs if s[1] > 0], key=lambda s: s[1], reverse=True)
     sq_neg = sorted([s for s in sq_subs if s[1] < 0], key=lambda s: s[1])
@@ -401,6 +408,25 @@ def build_narrative(packet: dict, period: str, ol_label: str, ol_year: int) -> s
     if sq_neg:
         sq_outperf.append("partially offset by " + fmt_sub(sq_neg))
     sq_outperf_phrase = "; ".join(sq_outperf)
+
+    # AP-supplementary phrasing for Adj Opex (e.g. "and -$117M below AP") and R40
+    adj_opex_ap_delta_raw = _delta("adj_opex", "ap")  # may need different key — fallback below
+    if adj_opex_ap_delta_raw == 0 and raw.get("adj_opex_ap") is None:
+        # Adj Opex AP may not exist directly; derive from GP - AOI = Adj Opex
+        gp_ap = raw.get("block_gp_ap")
+        oi_ap = raw.get("adj_oi_ap")
+        if gp_ap is not None and oi_ap is not None:
+            adj_opex_ap = gp_ap - oi_ap
+            adj_opex_actual = raw.get("adj_opex_actual")
+            if adj_opex_actual is not None:
+                adj_opex_ap_delta_raw = adj_opex_actual - adj_opex_ap
+    adj_opex_ap_phrase = ""
+    if adj_opex_ap_delta_raw:
+        direction = "below" if adj_opex_ap_delta_raw < 0 else "above"
+        adj_opex_ap_phrase = f", and {fmt_driver_delta(adj_opex_ap_delta_raw)} {direction} AP"
+
+    # R40 AP-supplementary: read the AP pts directly from flash table col AP_P (e.g. "+16 pts")
+    r40_ap_str = v("r40", AP_P)
 
     # V/A/F bucket commentary
     var_bullet = bucket_commentary("Variable costs", raw, "opex_total_variable_actual",
@@ -421,28 +447,28 @@ def build_narrative(packet: dict, period: str, ol_label: str, ol_year: int) -> s
 
 ## {month} {year} Summary
 
-**Block gross profit** was {f("block_gp", A)} in {month}, growing {v("block_gp", YOY)} YoY ({v("block_gp", PMYOY)} in {prior_month}) and landing {variance_phrase(v("block_gp", AP_P), v("block_gp", AP_D), "AP")} ({brand_bridge}).
+**Block gross profit** was {f("block_gp", A)} in {month}, growing {v("block_gp", YOY)} YoY ({v("block_gp", PMYOY)} in {prior_month}) and landing {variance_phrase(v("block_gp", OL_P), v("block_gp", OL_D), ol_label)} ({brand_bridge}).
 
-- **Cash App gross profit** for {month} was {f("ca_gp", A)}, growing {v("ca_gp", YOY)} YoY ({v("ca_gp", PMYOY)} in {prior_month}) and landing {variance_phrase(v("ca_gp", AP_P), v("ca_gp", AP_D), "AP")}. Outperformance vs. AP: {ca_outperf_phrase}.
-    - **Commerce GMV** was {f("commerce_gmv", A)}, {variance_phrase(v("commerce_gmv", AP_P), v("commerce_gmv", AP_D), "AP")} and {v("commerce_gmv", YOY)} YoY ({v("commerce_gmv", PMYOY)} in {prior_month}).
-    - **Cash App Actives** landed at {f("cash_actives", A)}, {variance_phrase(v("cash_actives", AP_P), v("cash_actives", AP_D), "AP")} and growing {v("cash_actives", YOY)} YoY ({v("cash_actives", PMYOY)} in {prior_month}).
-    - **Cash App Inflows per Active** were {f("cash_inflows_pa", A)}, {variance_phrase(v("cash_inflows_pa", AP_P), v("cash_inflows_pa", AP_D), "AP")} and {v("cash_inflows_pa", YOY)} YoY ({v("cash_inflows_pa", PMYOY)} in {prior_month}).
-- **Square gross profit** for {month} was {f("sq_gp", A)}, growing {v("sq_gp", YOY)} YoY ({v("sq_gp", PMYOY)} in {prior_month}) and landing {variance_phrase(v("sq_gp", AP_P), v("sq_gp", AP_D), "AP")}. Drivers: {sq_outperf_phrase}.
-    - **Global GPV** was {f("sq_gpv", A)}, {variance_phrase(v("sq_gpv", AP_P), v("sq_gpv", AP_D), "AP")} and {v("sq_gpv", YOY)} YoY ({v("sq_gpv", PMYOY)} in {prior_month}).
-    - **US GPV** was {f("sq_us", A)}, {variance_phrase(v("sq_us", AP_P), v("sq_us", AP_D), "AP")} and {v("sq_us", YOY)} YoY ({v("sq_us", PMYOY)} in {prior_month}).
-    - **INTL GPV** was {f("sq_intl", A)}, {variance_phrase(v("sq_intl", AP_P), v("sq_intl", AP_D), "AP")} and {v("sq_intl", YOY)} YoY ({v("sq_intl", PMYOY)} in {prior_month}).
-- **TIDAL gross profit** for {month} was {f("tidal", A)}, {v("tidal", YOY)} YoY ({v("tidal", PMYOY)} in {prior_month}) and landed {variance_phrase(v("tidal", AP_P), v("tidal", AP_D), "AP")}.
-- **Proto gross profit** for {month} was {f("proto", A)}, and landed {variance_phrase(v("proto", AP_P), v("proto", AP_D), "AP")}.
+- **Cash App gross profit** for {month} was {f("ca_gp", A)}, growing {v("ca_gp", YOY)} YoY ({v("ca_gp", PMYOY)} in {prior_month}) and landing {variance_phrase(v("ca_gp", OL_P), v("ca_gp", OL_D), ol_label)}. Performance against {ol_label} was driven by {ca_outperf_phrase}.
+    - **Commerce GMV** was {f("commerce_gmv", A)}, {variance_phrase(v("commerce_gmv", OL_P), v("commerce_gmv", OL_D), ol_label)} and {v("commerce_gmv", YOY)} YoY ({v("commerce_gmv", PMYOY)} in {prior_month}).
+    - **Cash App Actives** landed at {f("cash_actives", A)}, {variance_phrase(v("cash_actives", OL_P), v("cash_actives", OL_D), ol_label)} and growing {v("cash_actives", YOY)} YoY ({v("cash_actives", PMYOY)} in {prior_month}).
+    - **Cash App Inflows per Active** were {f("cash_inflows_pa", A)}, {variance_phrase(v("cash_inflows_pa", OL_P), v("cash_inflows_pa", OL_D), ol_label)} and {v("cash_inflows_pa", YOY)} YoY ({v("cash_inflows_pa", PMYOY)} in {prior_month}).
+- **Square gross profit** for {month} was {f("sq_gp", A)}, growing {v("sq_gp", YOY)} YoY ({v("sq_gp", PMYOY)} in {prior_month}) and landing {variance_phrase(v("sq_gp", OL_P), v("sq_gp", OL_D), ol_label)}. Performance against {ol_label} was driven by {sq_outperf_phrase}.
+    - **Global GPV** was {f("sq_gpv", A)}, {variance_phrase(v("sq_gpv", OL_P), v("sq_gpv", OL_D), ol_label)} and {v("sq_gpv", YOY)} YoY ({v("sq_gpv", PMYOY)} in {prior_month}).
+    - **US GPV** was {f("sq_us", A)}, {variance_phrase(v("sq_us", OL_P), v("sq_us", OL_D), ol_label)} and {v("sq_us", YOY)} YoY ({v("sq_us", PMYOY)} in {prior_month}).
+    - **INTL GPV** was {f("sq_intl", A)}, {variance_phrase(v("sq_intl", OL_P), v("sq_intl", OL_D), ol_label)} and {v("sq_intl", YOY)} YoY ({v("sq_intl", PMYOY)} in {prior_month}).
+- **TIDAL gross profit** for {month} was {f("tidal", A)}, {v("tidal", YOY)} YoY ({v("tidal", PMYOY)} in {prior_month}) and landed {variance_phrase(v("tidal", OL_P), v("tidal", OL_D), ol_label)}.
+- **Proto gross profit** for {month} was {f("proto", A)}, and landed {variance_phrase(v("proto", OL_P), v("proto", OL_D), ol_label)}.
 
-**Adjusted Opex** for {month} was {f("adj_opex", A)}, {variance_phrase(v("adj_opex", OL_P), v("adj_opex", OL_D), ol_label)} and {v("adj_opex", YOY)} YoY ({v("adj_opex", PMYOY)} in {prior_month}).
+**Adjusted Opex** for {month} was {f("adj_opex", A)} ({v("adj_opex", YOY)} YoY, {v("adj_opex", PMYOY)} in {prior_month}), {variance_phrase(v("adj_opex", OL_P), v("adj_opex", OL_D), ol_label)}{adj_opex_ap_phrase}.
 
 {var_bullet}
 {acq_bullet}
 {fix_bullet}
 
-**Adjusted Operating Income** landed at {f("adj_oi", A)} in {month}{aoi_margin_phrase}, {variance_phrase(v("adj_oi", AP_P), v("adj_oi", AP_D), "AP")} and {v("adj_oi", YOY)} YoY ({v("adj_oi", PMYOY)} in {prior_month}).
+**Adjusted Operating Income** landed at {f("adj_oi", A)} in {month}{aoi_margin_phrase}, {variance_phrase(v("adj_oi", OL_P), v("adj_oi", OL_D), ol_label)} and {v("adj_oi", YOY)} YoY ({v("adj_oi", PMYOY)} in {prior_month}).
 
-**{month} Rule of 40** was {f("r40", A)}, {variance_phrase(v("r40", AP_P), "", "AP")} and {v("r40", YOY)} YoY ({v("r40", PMYOY)} in {prior_month}).
+**{month} Rule of 40** was {f("r40", A)}, {variance_phrase(v("r40", OL_P), "", ol_label)}, and {r40_ap_str} above AP ({v("r40", YOY)} YoY, {v("r40", PMYOY)} in {prior_month}).
 """
 
     return md

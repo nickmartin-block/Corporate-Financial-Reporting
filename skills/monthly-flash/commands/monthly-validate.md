@@ -1,6 +1,6 @@
 ---
 name: monthly-validate
-description: Validate the published Block Monthly Topline Flash Google Doc against the populated brand reporting model ranges (L400:S427 + L432:R468). Compares every metric value-by-value. Run after /monthly-flash completes or independently to re-check after manual edits.
+description: Validate the published Block Monthly Topline Flash Google Doc against the validation-copy brand reporting model ranges. Compares every metric value-by-value. Run after /monthly-flash completes or independently to re-check after manual edits. Auto-detects monthly vs quarterly mode from the period in the Doc.
 allowed-tools:
   - Bash(cd ~/skills/gdrive && uv run gdrive-cli.py:*)
   - Bash(sq agent-tools google-drive:*)
@@ -14,7 +14,7 @@ metadata:
 
 # Monthly Flash — Data Validation
 
-Your job: confirm every number in the published Doc matches the populated data layer. Flag every mismatch. Do not write to the Doc. Do not fix errors.
+Your job: confirm every number in the published Doc matches the validation copy in `MRP Charts & Tables` (the sheet that `/flash-data` populated from BDM + Snowflake). Flag every mismatch. Do not write to the Doc. Do not fix errors.
 
 **Dependencies:** Load `~/Corporate-Financial-Reporting/skills/monthly-flash/skills/financial-reporting.md` for formatting standards and rounding rules.
 
@@ -26,42 +26,57 @@ Your job: confirm every number in the published Doc matches the populated data l
 |---|---|
 | Data workbook | `15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0` |
 | Data tab | `MRP Charts & Tables` |
-| Flash table range | `L400:S427` |
+| Flash table range (monthly) | `L400:S427` |
+| Flash table range (quarterly) | `T400:Y427` (labels still in col L) |
 | Standardized P&L range | `L432:R468` |
-| Target Doc | `1faTUvm5CYK-W4J7JeKezbi1aEvRbSJ95vkjMtzc_sJA` (Block April-26 Flash Update) |
-| Target Tab | `Claude` (tabId `t.6lmbmhs5p561`) |
 | Validation Path | `~/Desktop/Nick's Cursor/Monthly Reporting/validation_YYYY_MM.md` |
+
+Target Doc + Tab are supplied as a URL argument: `/monthly-validate <DOC_URL>` or read from the most recent `/monthly-flash` invocation context. Parse the URL like the `/monthly-flash` command does (Step 1 there).
 
 ---
 
-## Step 1 — Auth
+## Step 1 — Auth + parse target
 
 ```bash
 cd ~/skills/gdrive && uv run gdrive-cli.py auth status
 ```
 
-Stop if not valid.
+Parse `<DOC_URL>` → `DOC_ID` + `TAB_ID`. Stop if auth or URL is invalid.
+
+Determine mode from the period in the doc:
+- Read the H1 of the target tab. If it says "Block Topline Flash: {Month} {Year}" (e.g. "April 2026") → **monthly**.
+- If it says "Block Topline Flash: Q{N} {Year}" (e.g. "Q2 2026") → **quarterly**.
 
 ---
 
 ## Step 2 — Read both sources in parallel
 
-**Sheet (source of truth):**
+**Sheet (validation copy):**
 
+Monthly mode:
 ```bash
-cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "MRP Charts & Tables\!L400:S427"
-cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "MRP Charts & Tables\!L432:R468"
+cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "'MRP Charts & Tables'!L400:S427"
+cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "'MRP Charts & Tables'!L432:R468"
+```
+
+Quarterly mode (labels still in col L, plus T-Y for the QTD data):
+```bash
+cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "'MRP Charts & Tables'!L400:L427"
+cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "'MRP Charts & Tables'!T400:Y427"
+cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "'MRP Charts & Tables'!L432:R468"
 ```
 
 **Doc text (what we're validating):**
 
-Find the `claude` tab by name and read its content.
+Read the target tab's content via `docs get {DOC_ID} --include-tabs` and navigate to `tabId={TAB_ID}`.
 
 ---
 
 ## Step 3 — Build ground truth from the sheet
 
-### Flash table column mapping (L400:S427)
+### Flash table column mapping
+
+**Monthly (L400:S427):**
 
 | Index (col offset) | Content |
 |---|---|
@@ -73,6 +88,19 @@ Find the `claude` tab by name and read its content.
 | 5 | vs. AP % |
 | 6 | YoY % |
 | 7 | Prior-month YoY % |
+
+**Quarterly (T400:Y427, no label col within the range — labels live in col L):**
+
+| Index (col offset in T-Y) | Content |
+|---|---|
+| 0 | Actual (T) |
+| 1 | vs. Q-OL $ (U) |
+| 2 | vs. Q-OL % (V) |
+| 3 | vs. AP $ (W) |
+| 4 | vs. AP % (X) |
+| 5 | YoY % (Y) |
+
+Quarterly mode has no Prior-month YoY — skip that comparison.
 
 ### Flash table row mapping (0-indexed from values array, which starts at row 400)
 

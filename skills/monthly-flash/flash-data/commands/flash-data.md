@@ -1,6 +1,6 @@
 ---
 name: flash-data
-description: Populate the Monthly Flash data layer in the brand reporting model. Pulls all metrics from BDM + Snowflake, computes derivations (Adj OpEx, Rule of 40, Inflows/Active, V/A/F bucket totals), applies the nm rule for >1000% variances, and writes formatted values to MRP Charts & Tables!L400:S427 (Flash table) and L432:R468 (Standardized P&L). This is Step 1 of the /monthly-flash pipeline — it replaces the manual MRP Charts & Tables population.
+description: Build the Flash data layer. Pulls all metrics from BDM + Snowflake, computes derivations (Adj OpEx, Rule of 40, Inflows/Active, V/A/F bucket totals), applies the nm rule for >1000% variances, and writes formatted values to the validation copy in MRP Charts & Tables — `L400:S427` for monthly, `T400:Y427` for quarterly — alongside the Standardized P&L at `L432:R468`. Also emits a JSON packet consumed by /monthly-flash for narrative + Doc table population.
 allowed-tools:
   - mcp__blockdata__fetch_metric_data
   - mcp__blockdata__metric_store_search

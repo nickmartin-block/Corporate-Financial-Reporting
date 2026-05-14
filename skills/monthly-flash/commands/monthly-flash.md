@@ -1,6 +1,6 @@
 ---
 name: monthly-flash
-description: Generate, publish, and validate the Block Monthly Topline Flash end-to-end. Step 1 invokes /flash-data to populate the Flash table (L400:S427) and Standardized P&L (L432:R468) from BDM + Snowflake. Step 2-3 read those ranges, generate the narrative with GAAP V/A/F + driver commentary, publish to the target Doc, and validate. Replaces the old flow that depended on a manually-populated MRP Charts & Tables sheet.
+description: Generate, publish, and validate the Block Monthly Topline Flash end-to-end. Takes a target Google Doc URL as Step 1, builds the data layer from BDM + Snowflake via /flash-data, generates the narrative with GAAP V/A/F + driver commentary, populates the in-tab Summary Table, and validates. Auto-detects monthly vs quarterly mode from the report period.
 allowed-tools:
   - Bash(cd ~/skills/gdrive && uv run gdrive-cli.py:*)
   - Bash(sq agent-tools google-drive:*)
@@ -16,7 +16,7 @@ metadata:
 
 # Block Monthly Topline Flash
 
-Generate, publish, and validate the monthly flash report in one pass. v2.0 sources data from BDM + Snowflake (via `/flash-data`) instead of the manual MRP Charts & Tables sheet.
+Generate, publish, and validate the monthly flash report in one pass. Data is sourced from BDM + Snowflake via `/flash-data` and written into a "validation copy" in the brand reporting model (`MRP Charts & Tables`), then read by the narrative + Doc table populator. The target Doc is supplied as a URL argument so the same skill works for any month + any Doc.
 
 **Dependencies:**
 - `~/Corporate-Financial-Reporting/skills/monthly-flash/flash-data/commands/flash-data.md` — Step 1 invokes this

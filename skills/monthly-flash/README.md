@@ -34,32 +34,42 @@ The output is a management-ready Google Doc tab, a local markdown file, and a va
 Open Claude Code in the project directory and type:
 
 ```
-/monthly-flash
+/monthly-flash <DOC_URL>
 ```
 
+`<DOC_URL>` is the Google Doc that holds the shell template for this cycle (H1 with `[MONTH] [YEAR]` placeholders, italic disclaimer, H2 "[MONTH] Summary", empty narrative space, H2 "Summary Table", 28×7 table shell). Each cycle, share the URL — the same skill works for any month + any target Doc.
+
 That's it. The command handles everything end-to-end:
-- Step 1: Auth check (Google Drive)
-- Step 2: Read MRP Charts & Tables sheet + detect monthly vs. quarterly mode
-- Step 3: Generate the flash narrative (monthly or quarterly template)
-- Step 4: Save markdown file
-- Step 5: Publish to Google Doc (with formatting fixes)
-- Step 6: Validate every metric against the source sheet
-- Step 7: Report results (including which mode was used)
+- Step 1: Receive Doc URL → parse DOC_ID + TAB_ID, detect period + mode (monthly vs quarterly)
+- Step 2: Invoke `/flash-data` to populate the validation copy in `MRP Charts & Tables` + emit the JSON packet
+- Step 3: Read the populated data layer
+- Step 4: Generate the flash narrative
+- Step 5: Save markdown file locally
+- Step 6: Publish to the Doc — placeholder fill, narrative insert with bullet nesting + Roboto + bold labels + red "Corp to include context" markers, then populate the in-tab Summary Table from the validation copy
+- Step 7: Validate every metric against the validation copy (`/monthly-validate`)
+- Step 8: Report results
 
 Output files:
-- `~/Desktop/Nick's Cursor/Monthly Reporting/monthly_flash_YYYY_MM.md`
-- `~/Desktop/Nick's Cursor/Monthly Reporting/validation_YYYY_MM.md`
+- `~/Desktop/Nick's Cursor/Monthly Reporting/monthly_flash_YYYY_MM.md` (narrative)
+- `~/Desktop/Nick's Cursor/Monthly Reporting/validation_YYYY_MM.md` (validation report)
 
 ### Standalone commands
 
-You can also run validation independently:
-- `/monthly-validate` — re-run validation on an already-published Doc (useful after manual edits)
+- `/monthly-validate <DOC_URL>` — re-run validation against an already-published Doc.
+- `/flash-data` — refresh the validation copy + emit the packet without doing the narrative/publish.
 
 ---
 
-## Quarter-End Mode
+## Monthly vs Quarterly Mode
 
-**Status:** v2.0 ships monthly-only. Quarter-end months (March, June, September, December) will get a QTD pull + quarterly-anchored commentary in a follow-up release. Same Doc tab + table shape — different sourcing window + narrative phrasing.
+Auto-detected from the report period:
+
+| Period | Mode | Data source in sheet |
+|---|---|---|
+| Jan, Feb, Apr, May, Jul, Aug, Oct, Nov | Monthly | `L400:S427` (single-month) |
+| Mar, Jun, Sep, Dec | Quarterly | `T400:Y427` (QTD / full-quarter sums) |
+
+Quarterly mode anchors the narrative to `Q1 / Q2 / Q3 / Q4 {Year}` instead of month names and drops the prior-month YoY parenthetical (the QTD view has no equivalent column). Same sources, same row labels — just three months summed.
 
 ---
 
@@ -101,8 +111,11 @@ The monthly flash reuses the same `gdrive-cli.py` tool from `skills/weekly-repor
 | Snowflake — `app_hexagon.block.operational_metrics_forecast` | Commerce GMV plan scenarios |
 | Snowflake — `app_bi.square_fns.vcompany_goals` | Square US/INTL GPV plan scenarios |
 | Hyperion — `app_hexagon.schedule2.finstmt_master` | US Payments GP (product=1010 direct; BDM aggregate disagrees by ~$17M) |
-| Brand reporting model — `MRP Charts & Tables!L400:S427` | Flash table (28×8): label, Actual, vs. OL $/%, vs. AP $/%, YoY %, Prior-mo YoY % |
+| Brand reporting model — `MRP Charts & Tables!L400:S427` | Flash table validation copy (28×8): label, Actual, vs. OL $/%, vs. AP $/%, YoY %, Prior-mo YoY %. Monthly mode. |
+| Brand reporting model — `MRP Charts & Tables!T400:Y427` | Flash table validation copy (28×6): Actual, vs. Q-OL $/%, vs. AP $/%, YoY %. Quarterly mode. Labels stay in col L. |
 | Brand reporting model — `MRP Charts & Tables!L432:R468` | Standardized P&L (37×7): GAAP OpEx by line item, V/A/F bucket totals |
+
+The brand reporting model holds a "validation copy" of the data layer — populated by `/flash-data` from BDM + Snowflake, used by Nick for human inspection and by `/monthly-validate` for cell-by-cell comparison against the published Doc.
 
 The full source-of-truth mapping lives in `flash-data/skills/flash-data-sourcing.md`.
 
@@ -145,8 +158,13 @@ The flash compares to **Annual Plan (AP)** for Q1. For subsequent quarters, the 
 
 ## Doc Publishing Notes
 
-- **Persistent template tab.** The Claude tab is a permanent template: H1 title, italic disclaimer, H2 section markers, and a 28×7 table shell. Each run mutates the placeholders + narrative space + table cells in place — it does not wipe + reinsert.
-- **Table population path.** `populate_flash_table.py` builds Docs API batchUpdate requests targeting each cell's `startIndex` directly. This avoids the multi-table-per-tab limitation in `sq agent-tools docs-edit update_table_cell` (which ignores `table_start_position` / `table_index`).
-- **Bullet nesting.** The markdown converter renders parent bullets (Cash App, Square) as paragraphs rather than list items. The command deletes bullets, inserts tab characters at sub-item starts, then recreates bullets with `BULLET_DISC_CIRCLE_SQUARE` for nesting.
-- **Italic/bold disclaimer.** The converter doesn't render `*italic **bold** italic*` cleanly. The command strips literal asterisks and applies italic/bold via `updateTextStyle`.
-- **Red "Corp to include context" markers.** Bucket-level overruns (≥$20M OR ≥10% vs OL) append a red-bold "Corp to include context." sentinel. Step 5d in the command applies the foreground color post-insert.
+- **Doc URL as Step 1.** The target Doc + tab are supplied as a URL argument. The same skill works for any month + any target Doc; nothing is hardcoded.
+- **Persistent template tab.** The target tab is a permanent template: H1 with `[MONTH] [YEAR]` placeholders, italic disclaimer, H2 "[MONTH] Summary" + H2 "Summary Table" markers, and a 28×7 table shell. Each run fills the placeholders, replaces the narrative body between H2 anchors, and re-populates the table cells — it does not wipe + reinsert the whole tab.
+- **Table population path.** `populate_flash_table.py` builds Docs API `batchUpdate` requests targeting each cell's `startIndex` directly. This avoids the multi-table-per-tab limitation in `sq agent-tools docs-edit update_table_cell` (which ignores `table_start_position` / `table_index`).
+- **Mode-aware ranges.** Monthly mode reads `L400:S427` from the validation copy. Quarterly mode reads labels from `L400:L427` and QTD data from `T400:Y427`. Doc col 6 (Prior-mo YoY) is cleared in quarterly mode since QTD has no equivalent.
+- **Bullet nesting.** The markdown converter renders parent bullets (Cash App, Square) as paragraphs rather than list items. After insert, the command deletes bullets, inserts tab characters at sub-item paragraph starts, then re-creates bullets with `BULLET_DISC_CIRCLE_SQUARE` for proper nesting.
+- **NORMAL_TEXT reset.** `insert-markdown` inheriting from the preceding H2 promotes every inserted paragraph to HEADING_2 style. The command applies a follow-up `updateParagraphStyle` with `namedStyleType=NORMAL_TEXT` over the narrative range. Watch out: don't overshoot into the next H2 (defensively restore HEADING_2 on "Summary Table" if needed).
+- **Italic/bold disclaimer.** The shell's italic disclaimer (with bold "Monthly Management Reporting Pack scheduled for [MRP DATE]") is preserved across runs. `[MRP DATE]` stays as a placeholder — Nick fills in manually.
+- **Bold labels post-insert.** `insert-markdown` sometimes drops bold styling when paragraphs are HEADING_2-inherited. The command applies bold post-insert to every metric label (Block gross profit, Cash App gross profit, …, Adjusted Operating Income, {Period} Rule of 40).
+- **Red "Corp to include context" markers.** Bucket-level overruns (≥$20M OR ≥10% vs OL) append a red-bold "Corp to include context." sentinel. The publish step applies `foregroundColor={red:0.85, green:0.16, blue:0.16}` + `bold:true` to each occurrence.
+- **Roboto everywhere.** Both narrative paragraphs and table cells use Roboto. `insert-markdown` is called with `--font Roboto`; the populator writes Roboto on each table cell's text style. The shell template's H1 / disclaimers / H2 should also be set to Roboto (do this once per shell).

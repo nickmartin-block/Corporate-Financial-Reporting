@@ -9,3 +9,5 @@ skills/weekly-reporting/gdrive/__pycache__/
 gcp-oauth.keys.json
 credentials.json
 *.keys.json
+# Live financial fixtures — generated each cycle, not safe to commit
+skills/monthly-flash/flash-data/test/*.json

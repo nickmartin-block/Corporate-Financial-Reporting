@@ -1,6 +1,6 @@
 # Block Monthly Topline Flash — Automation
 
-A single command (`/monthly-flash`) that generates, publishes, and validates the Block Monthly Topline Flash using Claude Code.
+A single command (`/monthly-flash`) that generates, publishes, and validates the Block Monthly Topline Flash using Claude Code. **v2.0** — sources data from BDM + Snowflake (via `/flash-data`), populates the Doc Claude tab table via the Docs API, and uses a persistent template shell rather than wiping + reinserting markdown.
 
 ---
 
@@ -8,19 +8,22 @@ A single command (`/monthly-flash`) that generates, publishes, and validates the
 
 Each month after close, Block FP&A publishes a topline flash email with preliminary results for senior management. This system automates the entire pipeline:
 
-1. **Reads the MRP Charts & Tables sheet** — pulls every in-scope metric from a single range (`L11:Y90`): gross profit by brand and sub-product, volume metrics (GPV, GMV, Actives, Inflows), Variable Profit, Adjusted OpEx breakdown (V/A/F), Adjusted Operating Income, and Rule of 40.
+1. **Builds the data layer** (`/flash-data`) — pulls every in-scope metric directly from BDM + Snowflake, computes derivations (Rule of 40, Adj OpEx via GP − Adj OI identity, V/A/F bucket totals, etc.), and writes raw values + cell formats into the brand reporting model at `MRP Charts & Tables!L400:S427` (28×8 Flash table) and `L432:R468` (37×7 Standardized P&L). Also emits a JSON packet at `/tmp/flash_out_{month}.json` with formatted strings + raw values + line-item OpEx detail for driver attribution.
 
-2. **Detects monthly vs. quarterly mode** — at quarter-end months (March, June, September, December), the command automatically switches to quarterly mode. The narrative anchors to the full quarter (e.g., "Q1 2026") using QTD columns (T–Y) instead of monthly columns (M–S). Intra-quarter months use the standard monthly template.
+2. **Detects monthly vs. quarterly mode** — at quarter-end months (March, June, September, December), the command will switch to quarterly mode (narrative anchored to the full quarter, QTD columns). v2.0 ships monthly-only; quarterly mode is a planned follow-up.
 
 3. **Generates the narrative** — writes a structured flash report with:
-   - **Title block**: "Block Topline Flash: [Month] [Year]" (monthly) or "Block Topline Flash: Q[N] [Year]" (quarterly), with a disclaimer noting preliminary figures and a `[MRP DATE]` placeholder.
-   - **Summary section**: Block GP headline with brand bridge, followed by Cash App (6 sub-products + ex-Commerce detail + Actives + Inflows + Monetization Rate + Commerce GMV), Square (5 sub-products + Global/US/INTL GPV with constant-currency), TIDAL, Proto, Variable Profit, Adjusted OpEx with V/A/F breakdown, Adjusted OI, and Rule of 40.
-   - **Monthly mode**: every metric includes Actual, vs. AP delta ($ and %), YoY %, and prior month YoY % where available.
-   - **Quarterly mode**: every metric includes QTD Actual, vs. AP delta ($ and %), and YoY %. No prior-period comparisons. Point-in-time metrics (Actives, Inflows per Active, Monetization Rate) use the month-end figure with the month name.
+   - **Title block**: "Block Topline Flash: [Month] [Year]" + the standard disclaimer with `[MRP DATE]` placeholder.
+   - **Summary section**: Block GP headline with brand bridge, followed by Cash App (5 sub-products + Actives + Inflows + Commerce GMV), Square (5 sub-products + Global/US/INTL GPV), TIDAL, Proto, Adjusted OpEx with **GAAP V/A/F bucket commentary + driver attribution**, Adjusted OI, and Rule of 40.
+   - **GAAP V/A/F drivers** — each Variable / Acquisition / Fixed bucket shows top 2-3 line items by |Δ| vs OL with the |Δ| ≥ $2M OR ≥ 5% of bucket materiality threshold. Buckets with |Δ| ≥ $20M OR ≥ 10% are flagged with a red-bold "**Corp to include context.**" marker.
+   - **Variance precision rule** — narrative variance values (and table columns 2-4) follow the ±10 rule: `|magnitude| ≤ 10` → 1 decimal (`9.5%`, `$9.5M`, `+5.8 pts`); `> 10` → integer (`215%`, `$14M`, `+22 pts`). YoY columns / rates are not reformatted.
 
-4. **Publishes to Google Docs** — clears the target tab, inserts the markdown with rich formatting (headings, bold metric labels, nested bullet lists), and applies post-insertion fixes for bullet nesting and italic/bold disclaimer text.
+4. **Publishes to Google Doc** — the Claude tab is a persistent template (H1, disclaimer, H2 markers, 28×7 table shell). Each run:
+   - Replaces `[MONTH]` / `[YEAR]` / `[MRP DATE]` placeholders
+   - Inserts the narrative bullets between the H2 "Summary" and H2 "Summary Table" anchors
+   - **Populates the Summary Table cells directly from the sheet** via `populate_flash_table.py` (Docs API batch-update). Values pass writes text + Roboto 10pt + CENTER + bold for rows 10/26/27 (Block / Adj OI / R40). Colors pass applies green/red to cols 2-4 above their thresholds (±$0.5M for col 2, ±1% for cols 3-4); YoY cols 5-6 are always black.
 
-5. **Validates the data** — compares every metric value in the published Doc against the source spreadsheet. Checks Actuals, vs. AP deltas, YoY rates, sub-product deltas, and brand bridge contributions. Reports PASS/FAIL with details on any mismatches.
+5. **Validates the data** — compares every metric value in the published Doc against the source ranges. Reports PASS/FAIL with mismatch details.
 
 The output is a management-ready Google Doc tab, a local markdown file, and a validation report. One `[MRP DATE]` placeholder is left for the Monthly Management Reporting Pack date, which varies each month.
 
@@ -56,19 +59,7 @@ You can also run validation independently:
 
 ## Quarter-End Mode
 
-The command auto-detects quarter-end months from the sheet header:
-
-| Report Month | Mode | Data Source |
-|---|---|---|
-| Jan, Feb, Apr, May, Jul, Aug, Oct, Nov | Monthly | Columns M–S (indices 1–7) |
-| Mar, Jun, Sep, Dec | Quarterly | Columns T–Y (indices 8–13) |
-
-Key differences in quarterly mode:
-- Title: "Block Topline Flash: Q1 2026" instead of "Block Topline Flash: March 2026"
-- Section header: "Q1 Summary" instead of "March Summary"
-- All comparisons use QTD figures from the quarter columns
-- No prior-period YoY comparisons (the "X% in January" pattern is monthly-only)
-- Point-in-time metrics (Cash App Actives, Inflows per Active, Monetization Rate) fall back to the monthly column and reference the month name
+**Status:** v2.0 ships monthly-only. Quarter-end months (March, June, September, December) will get a QTD pull + quarterly-anchored commentary in a follow-up release. Same Doc tab + table shape — different sourcing window + narrative phrasing.
 
 ---
 
@@ -76,12 +67,24 @@ Key differences in quarterly mode:
 
 ```
 skills/monthly-flash/
-  ├── commands/                    Slash commands (what you type)
-  │   ├── monthly-flash.md          Full pipeline: generate + publish + validate
-  │   └── monthly-validate.md       Standalone validation (re-check without regenerating)
+  ├── commands/                          Slash commands (what you type)
+  │   ├── monthly-flash.md                Full pipeline: data layer → narrative → publish → validate
+  │   └── monthly-validate.md             Standalone validation (re-check without regenerating)
   │
-  └── skills/                      Reference docs (loaded as context)
-      └── financial-reporting.md     Global formatting recipe (rounding, signs, etc.)
+  ├── skills/                            Reference docs (loaded as context)
+  │   └── financial-reporting.md          Global formatting recipe (rounding, signs, ±10 rule, etc.)
+  │
+  └── flash-data/                        Data + narrative + table population layer (v2.0)
+      ├── commands/
+      │   └── flash-data.md               /flash-data — populates the sheet ranges + emits the JSON packet
+      ├── skills/
+      │   └── flash-data-sourcing.md      Source-of-truth: BDM metric / Snowflake table per row
+      ├── helpers/
+      │   ├── flash_data.py               Derivations + sheet-format strings + raw values (input → /tmp/flash_out_*.json)
+      │   ├── build_narrative.py          Narrative generator (consumes the packet, applies ±10 rule)
+      │   └── populate_flash_table.py     Docs API batch-update: values pass + colors pass for the Claude tab table
+      └── test/
+          └── apr26_raw.json              Validated Apr'26 fixture (do not commit live data)
 ```
 
 The monthly flash reuses the same `gdrive-cli.py` tool from `skills/weekly-reporting/gdrive/` for all Google Sheets and Docs operations.
@@ -92,16 +95,24 @@ The monthly flash reuses the same `gdrive-cli.py` tool from `skills/weekly-repor
 
 | Source | What It Provides |
 |--------|-----------------|
-| MRP Charts & Tables sheet (`L11:Y90`) | All metric values — actuals, vs. AP, vs. Q1OL, YoY %, Jan YoY % (monthly columns M–S), plus QTD equivalents (columns T–Y) |
+| BDM (Block Data Mart) | All headline / sub-product GP, GPV, GMV, Actives, Inflows, Adj OI, GAAP OpEx line items |
+| Snowflake — `app_finance_cash.fands.business_metrics_actuals_outlooks` | Cash App actives + inflows (plan + actuals) |
+| Snowflake — `AP_CUR_BI_G.CURATED_ANALYTICS_GREEN.CUR_C_M_ORDER_MASTER` | Commerce GMV actuals |
+| Snowflake — `app_hexagon.block.operational_metrics_forecast` | Commerce GMV plan scenarios |
+| Snowflake — `app_bi.square_fns.vcompany_goals` | Square US/INTL GPV plan scenarios |
+| Hyperion — `app_hexagon.schedule2.finstmt_master` | US Payments GP (product=1010 direct; BDM aggregate disagrees by ~$17M) |
+| Brand reporting model — `MRP Charts & Tables!L400:S427` | Flash table (28×8): label, Actual, vs. OL $/%, vs. AP $/%, YoY %, Prior-mo YoY % |
+| Brand reporting model — `MRP Charts & Tables!L432:R468` | Standardized P&L (37×7): GAAP OpEx by line item, V/A/F bucket totals |
 
-### Metrics Covered (21 metrics, 106 validated values)
+The full source-of-truth mapping lives in `flash-data/skills/flash-data-sourcing.md`.
+
+### Metrics Covered
 
 | Section | Metrics |
 |---------|---------|
-| Gross Profit | Block GP, Cash App GP (+ 6 sub-products), Square GP (+ 5 sub-products), TIDAL GP, Proto GP |
-| Cash App Detail | ex-Commerce GP, Actives, Inflows per Active, Monetization Rate, Commerce GMV |
-| Volume | Square GPV (Global, US, INTL, INTL CC) |
-| Profitability | Variable Profit, Adjusted OpEx (+ V/A/F breakdown), Adjusted OI, Rule of 40 |
+| Volume | Cash App Actives, Cash App Inflows per Active, Commerce GMV, Square GPV (Global / US / INTL / INTL CC) |
+| Gross Profit | Block GP; Cash App GP (Commerce, Borrow, Cash App Card, Instant Deposit, Post-Purchase BNPL); Square GP (US Payments, INTL Payments, Banking, SaaS, Hardware); TIDAL GP; Proto GP |
+| Profitability | Adjusted OpEx (GAAP V/A/F line items + bucket totals), Adjusted OI, Rule of 40 |
 
 ---
 
@@ -122,20 +133,20 @@ The flash compares to **Annual Plan (AP)** for Q1. For subsequent quarters, the 
 
 | Automated | Manual |
 |-----------|--------|
-| All metric extraction from the sheet | `[MRP DATE]` — Monthly Reporting Pack date |
-| Monthly vs. quarterly mode detection | Final review before distribution |
-| Narrative generation with formatting rules | Qualitative commentary (future enhancement) |
-| Brand bridge calculation (Cash App + Square + Other Brands) | |
-| Sub-product outperformance sorting | |
-| Google Doc publishing with bullet nesting + italic/bold | |
-| Cell-by-cell data validation (106 values) | |
+| Sourcing every metric from BDM + Snowflake (`/flash-data`) | `[MRP DATE]` — Monthly Reporting Pack date placeholder |
+| Writing the sheet ranges (Flash + Stnd P&L) with formats | Final review before distribution |
+| Narrative generation with ±10 precision rule + driver attribution | Qualitative commentary beyond V/A/F driver call-outs |
+| Brand bridge (Cash App + Square + Other Brands) | Sub-product narrative phrasing tweaks |
+| Sub-product outperformance ranking | |
+| Doc publishing: placeholder fill + narrative insert + table populate + color/bold formatting | |
+| Cell-by-cell validation between sheet and Doc | |
 
 ---
 
 ## Doc Publishing Notes
 
-The Google Docs markdown converter requires two post-insertion fixes that the command handles automatically:
-
-1. **Bullet nesting** — The converter renders parent bullets (Cash App, Square) as paragraphs instead of list items. The command deletes bullets, inserts tab characters at sub-item starts, then recreates bullets to achieve proper nesting (level 0 parents, level 1 children).
-
-2. **Italic/bold disclaimer** — The converter doesn't render `*italic **bold** italic*` correctly. The command removes literal asterisks and applies italic/bold formatting via the Docs API.
+- **Persistent template tab.** The Claude tab is a permanent template: H1 title, italic disclaimer, H2 section markers, and a 28×7 table shell. Each run mutates the placeholders + narrative space + table cells in place — it does not wipe + reinsert.
+- **Table population path.** `populate_flash_table.py` builds Docs API batchUpdate requests targeting each cell's `startIndex` directly. This avoids the multi-table-per-tab limitation in `sq agent-tools docs-edit update_table_cell` (which ignores `table_start_position` / `table_index`).
+- **Bullet nesting.** The markdown converter renders parent bullets (Cash App, Square) as paragraphs rather than list items. The command deletes bullets, inserts tab characters at sub-item starts, then recreates bullets with `BULLET_DISC_CIRCLE_SQUARE` for nesting.
+- **Italic/bold disclaimer.** The converter doesn't render `*italic **bold** italic*` cleanly. The command strips literal asterisks and applies italic/bold via `updateTextStyle`.
+- **Red "Corp to include context" markers.** Bucket-level overruns (≥$20M OR ≥10% vs OL) append a red-bold "Corp to include context." sentinel. Step 5d in the command applies the foreground color post-insert.

@@ -409,6 +409,53 @@ def build_narrative(packet: dict, period: str, ol_label: str, ol_year: int) -> s
         sq_outperf.append("partially offset by " + fmt_sub(sq_neg))
     sq_outperf_phrase = "; ".join(sq_outperf)
 
+    # Derived metrics: Block Variable Profit (= GP - Total Variable Costs)
+    #                  GAAP Operating Income (= GP - Total GAAP OpEx)
+    # Both shown with margin (% of Block GP). YoY is held until opex_total_*_yoy_prior
+    # gets sourced in flash_data.py (currently missing → opex_total_variable_yoy_prior is None).
+    def _vp_or_oi(component_key: str, scen: str) -> float | None:
+        gp = raw.get(f"block_gp_{scen}")
+        opex = raw.get(f"{component_key}_{scen}")
+        if gp is None or opex is None:
+            return None
+        return gp - opex
+
+    vp_actual = _vp_or_oi("opex_total_variable", "actual")
+    vp_ol = _vp_or_oi("opex_total_variable", "ol")
+    vp_margin = margin_pct(vp_actual, raw.get("block_gp_actual"))
+    vp_delta_ol = (vp_actual - vp_ol) if (vp_actual is not None and vp_ol is not None) else None
+    vp_pct_ol = (vp_delta_ol / vp_ol) if (vp_delta_ol is not None and vp_ol) else None
+
+    gaap_oi_actual = _vp_or_oi("opex_total_gaap", "actual")
+    gaap_oi_margin = margin_pct(gaap_oi_actual, raw.get("block_gp_actual"))
+
+    def fmt_dollar_M(d: float | None) -> str:
+        if d is None:
+            return ""
+        abs_v = abs(d) / 1_000_000
+        sign = "+" if d >= 0 else "-"
+        if abs_v <= PRECISION_RULE_THRESHOLD:
+            return f"{sign}${abs_v:.1f}M"
+        return f"{sign}${_half_up(abs_v)}M"
+
+    if vp_actual is not None:
+        vp_actual_fmt = f"${_half_up(vp_actual / 1_000_000)}M"
+        if vp_delta_ol is not None and vp_pct_ol is not None:
+            vp_phrase = variance_phrase(fmt_driver_pct(vp_pct_ol), fmt_dollar_M(vp_delta_ol), ol_label)
+            vp_margin_phrase = f" ({vp_margin} margin)" if vp_margin else ""
+            vp_line = f"**Block variable profit** landed at {vp_actual_fmt} in {month}{vp_margin_phrase}, {vp_phrase}."
+        else:
+            vp_line = f"**Block variable profit** landed at {vp_actual_fmt} in {month}."
+    else:
+        vp_line = ""
+
+    if gaap_oi_actual is not None:
+        gaap_oi_fmt = f"${_half_up(gaap_oi_actual / 1_000_000)}M"
+        gaap_oi_margin_phrase = f" ({gaap_oi_margin} margin)" if gaap_oi_margin else ""
+        gaap_oi_line = f"**GAAP operating income** landed at {gaap_oi_fmt} in {month}{gaap_oi_margin_phrase}."
+    else:
+        gaap_oi_line = ""
+
     # AP-supplementary phrasing for Adj Opex (e.g. "and -$117M below AP") and R40
     adj_opex_ap_delta_raw = _delta("adj_opex", "ap")  # may need different key — fallback below
     if adj_opex_ap_delta_raw == 0 and raw.get("adj_opex_ap") is None:
@@ -460,11 +507,15 @@ def build_narrative(packet: dict, period: str, ol_label: str, ol_year: int) -> s
 - **TIDAL gross profit** for {month} was {f("tidal", A)}, {v("tidal", YOY)} YoY ({v("tidal", PMYOY)} in {prior_month}) and landed {variance_phrase(v("tidal", OL_P), v("tidal", OL_D), ol_label)}.
 - **Proto gross profit** for {month} was {f("proto", A)}, and landed {variance_phrase(v("proto", OL_P), v("proto", OL_D), ol_label)}.
 
+{vp_line}
+
 **Adjusted Opex** for {month} was {f("adj_opex", A)} ({v("adj_opex", YOY)} YoY, {v("adj_opex", PMYOY)} in {prior_month}), {variance_phrase(v("adj_opex", OL_P), v("adj_opex", OL_D), ol_label)}{adj_opex_ap_phrase}.
 
 {var_bullet}
 {acq_bullet}
 {fix_bullet}
+
+{gaap_oi_line}
 
 **Adjusted Operating Income** landed at {f("adj_oi", A)} in {month}{aoi_margin_phrase}, {variance_phrase(v("adj_oi", OL_P), v("adj_oi", OL_D), ol_label)} and {v("adj_oi", YOY)} YoY ({v("adj_oi", PMYOY)} in {prior_month}).
 

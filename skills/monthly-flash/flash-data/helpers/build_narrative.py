@@ -54,6 +54,23 @@ def parse_period(period: str) -> tuple[str, str, int, int]:
     return MONTH_NAMES[mnum], MONTH_NAMES[prior_num], mnum, full_year
 
 
+def quarter_of(month_num: int) -> int:
+    """Return 1..4 for the given month number."""
+    return (month_num - 1) // 3 + 1
+
+
+def is_quarter_end(month_num: int) -> bool:
+    """Return True if month is quarter-end (Mar, Jun, Sep, Dec)."""
+    return month_num in (3, 6, 9, 12)
+
+
+def detect_mode(month_num: int, override: str | None = None) -> str:
+    """Determine 'monthly' or 'quarterly' from month number, with optional override."""
+    if override in ("monthly", "quarterly"):
+        return override
+    return "quarterly" if is_quarter_end(month_num) else "monthly"
+
+
 def get_row(table: list[list[Any]], row_offset: int) -> list[Any]:
     """Return a row's 7 data cells (skipping the label) from a 28×8 or 37×7 table."""
     return table[row_offset][1:]
@@ -307,11 +324,20 @@ def format_pct(v: float | None, *, signed: bool = False) -> str:
     return f"{abs(pct):.1f}%" + ("" if pct >= 0 else " (negative)")
 
 
-def build_narrative(packet: dict, period: str, ol_label: str, ol_year: int) -> str:
-    """Construct the full markdown narrative."""
+def build_narrative(packet: dict, period: str, ol_label: str, ol_year: int, mode: str = "monthly") -> str:
+    """Construct the full markdown narrative.
+    mode: "monthly" — uses month name + prior-month YoY parentheticals (M-S sheet view).
+          "quarterly" — uses "Q1/Q2/Q3/Q4" labels + no prior-month YoY (T-Y sheet view).
+    """
     raw = packet["raw_derived"]
     flash_t = packet["flash_table_formatted"]
-    month, prior_month, _, year = parse_period(period)
+    month, prior_month, mnum, year = parse_period(period)
+    qtr = quarter_of(mnum)
+    is_quarterly = (mode == "quarterly")
+    # Period label used in narrative ("April" vs "Q2")
+    period_label = f"Q{qtr}" if is_quarterly else month
+    # Period label with year ("April 2026" vs "Q2 2026")
+    period_long = f"Q{qtr} {year}" if is_quarterly else f"{month} {year}"
 
     # Convenience accessors for formatted flash cells (skipping label col)
     # Row offsets (0-indexed in the 28-row table)
@@ -443,16 +469,16 @@ def build_narrative(packet: dict, period: str, ol_label: str, ol_year: int) -> s
         if vp_delta_ol is not None and vp_pct_ol is not None:
             vp_phrase = variance_phrase(fmt_driver_pct(vp_pct_ol), fmt_dollar_M(vp_delta_ol), ol_label)
             vp_margin_phrase = f" ({vp_margin} margin)" if vp_margin else ""
-            vp_line = f"**Block variable profit** landed at {vp_actual_fmt} in {month}{vp_margin_phrase}, {vp_phrase}."
+            vp_line = f"**Block variable profit** landed at {vp_actual_fmt} in {period_label}{vp_margin_phrase}, {vp_phrase}."
         else:
-            vp_line = f"**Block variable profit** landed at {vp_actual_fmt} in {month}."
+            vp_line = f"**Block variable profit** landed at {vp_actual_fmt} in {period_label}."
     else:
         vp_line = ""
 
     if gaap_oi_actual is not None:
         gaap_oi_fmt = f"${_half_up(gaap_oi_actual / 1_000_000)}M"
         gaap_oi_margin_phrase = f" ({gaap_oi_margin} margin)" if gaap_oi_margin else ""
-        gaap_oi_line = f"**GAAP operating income** landed at {gaap_oi_fmt} in {month}{gaap_oi_margin_phrase}."
+        gaap_oi_line = f"**GAAP operating income** landed at {gaap_oi_fmt} in {period_label}{gaap_oi_margin_phrase}."
     else:
         gaap_oi_line = ""
 
@@ -486,30 +512,39 @@ def build_narrative(packet: dict, period: str, ol_label: str, ol_year: int) -> s
 
     aoi_margin_phrase = f" ({aoi_margin} margin)" if aoi_margin else ""
 
-    md = f"""# Block Topline Flash: {month} {year}
+    # Conditional "(prior-mo YoY in {prior_month})" parenthetical — monthly only.
+    def pmyoy_paren(metric: str) -> str:
+        if is_quarterly:
+            return ""
+        return f" ({v(metric, PMYOY)} in {prior_month})"
+
+    # Disclaimer wording: in Q1 we reference AP; in Q2+ reference the active OL.
+    disclaimer_anchor = "Annual Plan" if (ol_label == "AP" or qtr == 1) else f"Q{qtr} Outlook"
+
+    md = f"""# Block Topline Flash: {period_long}
 
 *This flash report provides a preliminary view of month-end close results, with figures subject to further review and potential adjustment. This streamlined report includes minimal commentary, as a more comprehensive analysis of underlying drivers will be provided in the* ***Monthly Management Reporting Pack scheduled for [MRP DATE]***.
 
-*Please note that the flash topline aligns with our externally reported guidelines, which include Cash App Pay Gross Profit within Cash App excluding Commerce. All comparisons reference {year} Annual Plan unless otherwise noted. Variances in charts are not color coded for amounts within +/- 1%, $0.5M, or YoY comparisons.*
+*Please note that the flash topline aligns with our externally reported guidelines, which include Cash App Pay Gross Profit within Cash App excluding Commerce. All comparisons reference {year} {disclaimer_anchor} unless otherwise noted. Variances in charts are not color coded for amounts within +/- 1%, $0.5M, or YoY comparisons.*
 
-## {month} {year} Summary
+## {period_long} Summary
 
-**Block gross profit** was {f("block_gp", A)} in {month}, growing {v("block_gp", YOY)} YoY ({v("block_gp", PMYOY)} in {prior_month}) and landing {variance_phrase(v("block_gp", OL_P), v("block_gp", OL_D), ol_label)} ({brand_bridge}).
+**Block gross profit** was {f("block_gp", A)} in {period_label}, growing {v("block_gp", YOY)} YoY{pmyoy_paren("block_gp")} and landing {variance_phrase(v("block_gp", OL_P), v("block_gp", OL_D), ol_label)} ({brand_bridge}).
 
-- **Cash App gross profit** for {month} was {f("ca_gp", A)}, growing {v("ca_gp", YOY)} YoY ({v("ca_gp", PMYOY)} in {prior_month}) and landing {variance_phrase(v("ca_gp", OL_P), v("ca_gp", OL_D), ol_label)}. Performance against {ol_label} was driven by {ca_outperf_phrase}.
-    - **Commerce GMV** was {f("commerce_gmv", A)}, {variance_phrase(v("commerce_gmv", OL_P), v("commerce_gmv", OL_D), ol_label)} and {v("commerce_gmv", YOY)} YoY ({v("commerce_gmv", PMYOY)} in {prior_month}).
-    - **Cash App Actives** landed at {f("cash_actives", A)}, {variance_phrase(v("cash_actives", OL_P), v("cash_actives", OL_D), ol_label)} and growing {v("cash_actives", YOY)} YoY ({v("cash_actives", PMYOY)} in {prior_month}).
-    - **Cash App Inflows per Active** were {f("cash_inflows_pa", A)}, {variance_phrase(v("cash_inflows_pa", OL_P), v("cash_inflows_pa", OL_D), ol_label)} and {v("cash_inflows_pa", YOY)} YoY ({v("cash_inflows_pa", PMYOY)} in {prior_month}).
-- **Square gross profit** for {month} was {f("sq_gp", A)}, growing {v("sq_gp", YOY)} YoY ({v("sq_gp", PMYOY)} in {prior_month}) and landing {variance_phrase(v("sq_gp", OL_P), v("sq_gp", OL_D), ol_label)}. Performance against {ol_label} was driven by {sq_outperf_phrase}.
-    - **Global GPV** was {f("sq_gpv", A)}, {variance_phrase(v("sq_gpv", OL_P), v("sq_gpv", OL_D), ol_label)} and {v("sq_gpv", YOY)} YoY ({v("sq_gpv", PMYOY)} in {prior_month}).
-    - **US GPV** was {f("sq_us", A)}, {variance_phrase(v("sq_us", OL_P), v("sq_us", OL_D), ol_label)} and {v("sq_us", YOY)} YoY ({v("sq_us", PMYOY)} in {prior_month}).
-    - **INTL GPV** was {f("sq_intl", A)}, {variance_phrase(v("sq_intl", OL_P), v("sq_intl", OL_D), ol_label)} and {v("sq_intl", YOY)} YoY ({v("sq_intl", PMYOY)} in {prior_month}).
-- **TIDAL gross profit** for {month} was {f("tidal", A)}, {v("tidal", YOY)} YoY ({v("tidal", PMYOY)} in {prior_month}) and landed {variance_phrase(v("tidal", OL_P), v("tidal", OL_D), ol_label)}.
-- **Proto gross profit** for {month} was {f("proto", A)}, and landed {variance_phrase(v("proto", OL_P), v("proto", OL_D), ol_label)}.
+- **Cash App gross profit** for {period_label} was {f("ca_gp", A)}, growing {v("ca_gp", YOY)} YoY{pmyoy_paren("ca_gp")} and landing {variance_phrase(v("ca_gp", OL_P), v("ca_gp", OL_D), ol_label)}. Performance against {ol_label} was driven by {ca_outperf_phrase}.
+    - **Commerce GMV** was {f("commerce_gmv", A)}, {variance_phrase(v("commerce_gmv", OL_P), v("commerce_gmv", OL_D), ol_label)} and {v("commerce_gmv", YOY)} YoY{pmyoy_paren("commerce_gmv")}.
+    - **Cash App Actives** landed at {f("cash_actives", A)}, {variance_phrase(v("cash_actives", OL_P), v("cash_actives", OL_D), ol_label)} and growing {v("cash_actives", YOY)} YoY{pmyoy_paren("cash_actives")}.
+    - **Cash App Inflows per Active** were {f("cash_inflows_pa", A)}, {variance_phrase(v("cash_inflows_pa", OL_P), v("cash_inflows_pa", OL_D), ol_label)} and {v("cash_inflows_pa", YOY)} YoY{pmyoy_paren("cash_inflows_pa")}.
+- **Square gross profit** for {period_label} was {f("sq_gp", A)}, growing {v("sq_gp", YOY)} YoY{pmyoy_paren("sq_gp")} and landing {variance_phrase(v("sq_gp", OL_P), v("sq_gp", OL_D), ol_label)}. Performance against {ol_label} was driven by {sq_outperf_phrase}.
+    - **Global GPV** was {f("sq_gpv", A)}, {variance_phrase(v("sq_gpv", OL_P), v("sq_gpv", OL_D), ol_label)} and {v("sq_gpv", YOY)} YoY{pmyoy_paren("sq_gpv")}.
+    - **US GPV** was {f("sq_us", A)}, {variance_phrase(v("sq_us", OL_P), v("sq_us", OL_D), ol_label)} and {v("sq_us", YOY)} YoY{pmyoy_paren("sq_us")}.
+    - **INTL GPV** was {f("sq_intl", A)}, {variance_phrase(v("sq_intl", OL_P), v("sq_intl", OL_D), ol_label)} and {v("sq_intl", YOY)} YoY{pmyoy_paren("sq_intl")}.
+- **TIDAL gross profit** for {period_label} was {f("tidal", A)}, {v("tidal", YOY)} YoY{pmyoy_paren("tidal")} and landed {variance_phrase(v("tidal", OL_P), v("tidal", OL_D), ol_label)}.
+- **Proto gross profit** for {period_label} was {f("proto", A)}, and landed {variance_phrase(v("proto", OL_P), v("proto", OL_D), ol_label)}.
 
 {vp_line}
 
-**Adjusted Opex** for {month} was {f("adj_opex", A)} ({v("adj_opex", YOY)} YoY, {v("adj_opex", PMYOY)} in {prior_month}), {variance_phrase(v("adj_opex", OL_P), v("adj_opex", OL_D), ol_label)}{adj_opex_ap_phrase}.
+**Adjusted Opex** for {period_label} was {f("adj_opex", A)} ({v("adj_opex", YOY)} YoY{', ' + v("adj_opex", PMYOY) + ' in ' + prior_month if not is_quarterly else ''}), {variance_phrase(v("adj_opex", OL_P), v("adj_opex", OL_D), ol_label)}{adj_opex_ap_phrase}.
 
 {var_bullet}
 {acq_bullet}
@@ -517,9 +552,9 @@ def build_narrative(packet: dict, period: str, ol_label: str, ol_year: int) -> s
 
 {gaap_oi_line}
 
-**Adjusted Operating Income** landed at {f("adj_oi", A)} in {month}{aoi_margin_phrase}, {variance_phrase(v("adj_oi", OL_P), v("adj_oi", OL_D), ol_label)} and {v("adj_oi", YOY)} YoY ({v("adj_oi", PMYOY)} in {prior_month}).
+**Adjusted Operating Income** landed at {f("adj_oi", A)} in {period_label}{aoi_margin_phrase}, {variance_phrase(v("adj_oi", OL_P), v("adj_oi", OL_D), ol_label)} and {v("adj_oi", YOY)} YoY{pmyoy_paren("adj_oi")}.
 
-**{month} Rule of 40** was {f("r40", A)}, {variance_phrase(v("r40", OL_P), "", ol_label)}, and {r40_ap_str} above AP ({v("r40", YOY)} YoY, {v("r40", PMYOY)} in {prior_month}).
+**{period_label} Rule of 40** was {f("r40", A)}, {variance_phrase(v("r40", OL_P), "", ol_label)}, and {r40_ap_str} above AP ({v("r40", YOY)} YoY{', ' + v("r40", PMYOY) + ' in ' + prior_month if not is_quarterly else ''}).
 """
 
     return md
@@ -531,21 +566,25 @@ def main():
     ap.add_argument("--period", required=True, help="Period e.g. Apr'26")
     ap.add_argument("--ol-label", required=True, help="Outlook scenario label e.g. Q2OL")
     ap.add_argument("--ol-year", type=int, default=None, help="Year for Annual Plan ref (default: derived from period)")
+    ap.add_argument("--mode", choices=["monthly", "quarterly", "auto"], default="auto",
+                    help="monthly: standard month view (M-S sheet cols). quarterly: QTD view (T-Y sheet cols, "
+                         "Q1/Q2/Q3/Q4 labels). auto: quarterly for Mar/Jun/Sep/Dec, else monthly.")
     ap.add_argument("--output", required=True, help="Path to write markdown")
     args = ap.parse_args()
 
     with open(args.packet) as f:
         packet = json.load(f)
 
-    _, _, _, year = parse_period(args.period)
+    _, _, mnum, year = parse_period(args.period)
     ol_year = args.ol_year or year
+    mode = detect_mode(mnum, override=None if args.mode == "auto" else args.mode)
 
-    md = build_narrative(packet, args.period, args.ol_label, ol_year)
+    md = build_narrative(packet, args.period, args.ol_label, ol_year, mode=mode)
 
     with open(args.output, "w") as f:
         f.write(md)
 
-    print(f"Wrote {args.output}")
+    print(f"Wrote {args.output} ({mode} mode)")
     print(f"Lines: {md.count(chr(10))}")
 
 

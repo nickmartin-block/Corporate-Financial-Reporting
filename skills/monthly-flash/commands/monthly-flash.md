@@ -23,7 +23,7 @@ Generate, publish, and validate the monthly flash report in one pass. v2.0 sourc
 - `~/Corporate-Financial-Reporting/skills/monthly-flash/flash-data/skills/flash-data-sourcing.md` — source-of-truth mapping
 - `~/Corporate-Financial-Reporting/skills/monthly-flash/skills/financial-reporting.md` — global formatting recipe
 
-**Scope:** v2.0 is monthly-only (intra-quarter months). Quarter-end months (Mar, Jun, Sep, Dec) — quarterly mode — will ship in a follow-up.
+**Scope:** v2.0 supports both **monthly** (intra-quarter: Jan, Feb, Apr, May, Jul, Aug, Oct, Nov) and **quarterly** (quarter-end: Mar, Jun, Sep, Dec) modes. Mode auto-detects from the report period. Quarterly mode reads the QTD view at `MRP Charts & Tables!T400:Y427` and uses Q1/Q2/Q3/Q4 narrative labels.
 
 ---
 
@@ -33,39 +33,83 @@ Generate, publish, and validate the monthly flash report in one pass. v2.0 sourc
 |---|---|
 | Data workbook | `15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0` |
 | Data tab | `MRP Charts & Tables` |
-| Flash table range | `L400:S427` |
+| Flash table range (monthly) | `L400:S427` (28 rows × 8 cols) |
+| Flash table range (quarterly) | `T400:Y427` (28 rows × 6 cols — no label col, no Prior-mo YoY) |
 | Standardized P&L range | `L432:R468` |
-| Target Doc | `1faTUvm5CYK-W4J7JeKezbi1aEvRbSJ95vkjMtzc_sJA` (Block April-26 Flash Update) |
-| Target Tab | `Claude` (tabId `t.6lmbmhs5p561`) |
 | Output Path | `~/Desktop/Nick's Cursor/Monthly Reporting/monthly_flash_YYYY_MM.md` |
 | Validation Path | `~/Desktop/Nick's Cursor/Monthly Reporting/validation_YYYY_MM.md` |
-| Helper data packet | `/tmp/flash_out_{month}.json` (produced by Step 1) |
+| Helper data packet | `/tmp/flash_out_{period}.json` (produced by `/flash-data`) |
+
+The target Doc + tab are supplied as a URL argument (Step 1).
 
 ---
 
-## Step 1 — Build the data layer
+## Step 1 — Receive Doc URL and configure run
 
-Invoke `/flash-data` to populate `L400:S427` and `L432:R468`, and emit the helper JSON packet `/tmp/flash_out_{month}.json`. See `flash-data.md` for the full sourcing reference.
+The user invokes `/monthly-flash <DOC_URL>` where `<DOC_URL>` looks like:
 
-If the user has already run `/flash-data` recently for this month, the JSON packet at `/tmp/flash_out_{month}.json` is sufficient — re-run is optional. Otherwise, run it now.
+```
+https://docs.google.com/document/d/<DOC_ID>/edit?tab=<TAB_ID>
+```
 
-After flash-data completes, the brand reporting model holds raw values formatted by sheet cell formats. The `/tmp/flash_out_{month}.json` packet has:
-- `flash_table_raw` / `flash_table_formatted` — 28 rows × 8 cols
-- `pnl_table_raw` / `pnl_table_formatted` — 37 rows × 7 cols
+Parse the URL into:
+
+- `DOC_ID` — the path segment between `/d/` and the next `/` or `?`.
+- `TAB_ID` — the value of the `tab` query parameter (e.g. `t.6lmbmhs5p561`). If the URL has no `tab=` param, default to the first tab returned by `gdrive-cli.py docs tabs <DOC_ID>`.
+
+Determine the report period:
+
+- If the user passed a period argument (e.g. `Apr'26`), use it.
+- Otherwise default to the most recently closed month (one back from today).
+
+Detect **mode**:
+
+- Monthly: report month ∈ {Jan, Feb, Apr, May, Jul, Aug, Oct, Nov}
+- Quarterly: report month ∈ {Mar, Jun, Sep, Dec} → narrative anchors to the full quarter (`Q1 / Q2 / Q3 / Q4`), reads QTD columns `T400:Y427`
+
+OL scenario label:
+
+| Quarter | OL label |
+|---|---|
+| Q1 | `AP` (no Q1OL — Annual Plan is Q1's plan) |
+| Q2 | `Q2OL` |
+| Q3 | `Q3OL` |
+| Q4 | `Q4OL` |
+
+State back: `Running /monthly-flash for {period} ({mode} mode) on Doc {DOC_ID}, tab {TAB_ID}. OL scenario = {ol_label}.`
+
+---
+
+## Step 2 — Build the data layer
+
+Invoke `/flash-data --period {period} --mode {mode}` to populate the sheet ranges and emit `/tmp/flash_out_{period}.json`. See `flash-data.md` for full sourcing.
+
+If `/flash-data` was already run for this period and the packet exists at `/tmp/flash_out_{period}.json`, re-run is optional.
+
+The packet contains:
+- `flash_table_raw` / `flash_table_formatted` — 28×8 (monthly) or 28×7 (quarterly) — same row structure either way
+- `pnl_table_raw` / `pnl_table_formatted` — 37 rows × 7 cols (always GAAP OpEx breakdown)
 - `raw_derived` — all derived values (Adj OpEx, R40 components, V/A/F bucket totals, every OpEx line item delta) needed for driver attribution
 
 ---
 
-## Step 2 — Read the populated data layer
+## Step 3 — Read the populated data layer
 
+For **monthly mode** (M-S, 8 cols):
 ```bash
-cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "MRP Charts & Tables\!L400:S427"
-cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "MRP Charts & Tables\!L432:R468"
+cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "'MRP Charts & Tables'!L400:S427"
+cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "'MRP Charts & Tables'!L432:R468"
+```
+
+For **quarterly mode** (T-Y QTD view, 6 cols — labels live in col L, shared with the monthly view):
+```bash
+cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "'MRP Charts & Tables'!L400:L427"
+cd ~/skills/gdrive && uv run gdrive-cli.py sheets read 15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 --range "'MRP Charts & Tables'!T400:Y427"
 ```
 
 Equivalent — load the formatted tables directly from the JSON packet (`flash_table_formatted` + `pnl_table_formatted`).
 
-### Flash table row mapping (L400:S427, 1-indexed from row 400)
+### Flash table row mapping (rows 400–427, both modes share the same row order)
 
 | Row offset | Metric |
 |---|---|
@@ -100,16 +144,31 @@ Equivalent — load the formatted tables directly from the JSON packet (`flash_t
 
 ### Column mapping (Flash table)
 
+**Monthly (M-S):**
+
 | Col offset | Content |
 |---|---|
-| 0 | Row label |
-| 1 | Actual |
-| 2 | vs. OL $ |
-| 3 | vs. OL % |
-| 4 | vs. AP $ |
-| 5 | vs. AP % |
-| 6 | YoY % |
-| 7 | Prior-month YoY % |
+| 0 | Row label (col L) |
+| 1 | Actual (M) |
+| 2 | vs. OL $ (N) |
+| 3 | vs. OL % (O) |
+| 4 | vs. AP $ (P) |
+| 5 | vs. AP % (Q) |
+| 6 | YoY % (R) |
+| 7 | Prior-month YoY % (S) |
+
+**Quarterly (T-Y):**
+
+| Col offset (T-Y range) | Content |
+|---|---|
+| 0 | Actual (T) |
+| 1 | vs. Q-OL $ (U) |
+| 2 | vs. Q-OL % (V) |
+| 3 | vs. AP $ (W) |
+| 4 | vs. AP % (X) |
+| 5 | YoY % (Y) |
+
+QTD view has no Prior-month YoY column. Labels still live in col L.
 
 ### Standardized P&L row mapping (L432:R468)
 
@@ -153,7 +212,7 @@ The Outlook scenario depends on the report quarter: Q1 → Q1OL, Q2 → Q2OL, Q3
 
 ---
 
-## Step 3 — Generate the flash narrative
+## Step 4 — Generate the flash narrative
 
 Determine report month and year from the period header (row 0, col 1 in L400:S427 — e.g., `Apr'26` → April 2026, prior month = March 2026).
 
@@ -231,110 +290,132 @@ If `abs(bucket_delta) >= 20,000,000` OR `abs(bucket_delta) / bucket_total >= 0.1
 
 ---
 
-## Step 4 — Save the MD
+## Step 5 — Save the MD
 
 Write to `~/Desktop/Nick's Cursor/Monthly Reporting/monthly_flash_YYYY_MM.md`.
 
 ---
 
-## Step 5 — Publish to Google Doc
+## Step 6 — Publish to Google Doc
 
-### 5a — Clear the target tab (`Claude`)
+The target tab (`{TAB_ID}`) is a persistent template: H1 with `[MONTH] [YEAR]` placeholders, italic disclaimer with `[MRP DATE]` + `[YEAR]` placeholders, H2 "[MONTH] Summary", empty narrative space, H2 "Summary Table", 28×7 table shell. **Do not clear the tab** — operate in place.
 
-Use tab ID `t.6lmbmhs5p561`. Get the content end index via `docs-inspect`, delete content range `[1, endIndex-1]` with `tabId`.
-
-### 5b — Insert markdown
+### 6a — Fill template placeholders
 
 ```bash
-cat "FILEPATH" | (cd ~/skills/gdrive && uv run gdrive-cli.py docs insert-markdown DOC_ID --tab TAB_ID)
+cd ~/skills/gdrive && uv run gdrive-cli.py docs replace {DOC_ID} --find "[MONTH]" --replace "{MonthName}"
+cd ~/skills/gdrive && uv run gdrive-cli.py docs replace {DOC_ID} --find "[YEAR]" --replace "{Year}"
 ```
 
-### 5c — Fix bullet nesting
+For quarterly mode, also adjust H2 from "MonthName Summary" → "Q{N} {Year} Summary":
+```bash
+cd ~/skills/gdrive && uv run gdrive-cli.py docs replace {DOC_ID} --find "{MonthName} Summary" --replace "Q{N} {Year} Summary"
+```
 
-The markdown converter does not handle nested bullet lists. After insertion:
+**Caveat:** `gdrive-cli.py docs replace` is NOT tab-scoped. Confirm the placeholder strings don't exist in other tabs of the same Doc before running; if they do, use direct `batchUpdate` with `tabId` instead.
 
-1. Get paragraph indices from `docs get`
-2. Identify the GP bullet section (Cash App through Proto)
-3. `deleteParagraphBullets` on the entire GP section range
-4. `insertText` a `\t` at the start of each sub-item paragraph (process in reverse index order):
-    - **Cash App sub-items:** Commerce GMV, Cash App Actives, Cash App Inflows per Active
-    - **Square sub-items:** Global GPV, US GPV, INTL GPV
-5. `createParagraphBullets` with `BULLET_DISC_CIRCLE_SQUARE` preset on the full GP section range
-6. Include `tabId` in every range/location object
+`[MRP DATE]` stays — Nick fills in manually.
 
-### 5d — Apply red color to "Corp to include context" phrases
+### 6b — Delete any existing narrative body
 
-For each `**Corp to include context.**` occurrence in the rendered doc (under V/A/F bullets):
+Fetch the doc, find the H2 "{PeriodLong} Summary" and H2 "Summary Table" paragraphs (where PeriodLong is e.g. "April 2026" for monthly, "Q2 2026" for quarterly). Delete the content range `[endIndex(H2 Summary), startIndex(H2 Summary Table)]` via `deleteContentRange` with `tabId`. This wipes any prior narrative without touching the H2 anchors or the table shell.
 
-1. Find the paragraph index containing the phrase
-2. Compute the text range for "Corp to include context." within that paragraph
-3. Apply `updateTextStyle` with `foregroundColor: { red: 0.85, green: 0.16, blue: 0.16 }` (Block red, slightly darker than pure red)
-4. Apply `bold: true` if not already bold (the markdown asterisks should have made it bold via the converter — verify)
-5. Process matches in reverse paragraph order to preserve indices
+### 6c — Insert the narrative markdown body
 
-### 5e — Fix italic/bold on disclaimer
-
-After insertion, check the first disclaimer paragraph. If it contains literal `*` characters (markdown not rendered):
-
-1. Delete the literal asterisk characters via `deleteContentRange`
-2. Apply `italic: true` via `updateTextStyle` to the entire first disclaimer paragraph
-3. Apply `bold: true` via `updateTextStyle` to "Monthly Management Reporting Pack scheduled for [MRP DATE]"
-
-Process deletions in reverse index order to preserve earlier indices.
-
-### 5f — Populate the Summary Table
-
-The Claude tab has a persistent 28×7 table shell (heading "Summary Table"). The narrative markdown inserted in 5b does NOT include this table — it's populated directly from the sheet via a separate Docs API batch-update. Two passes: values, then colors.
+The narrative MD (from Step 5) includes H1 + disclaimers + H2 markers + body. Strip the prefix (first 8 lines through and including the H2 line + the blank line after it) and pipe only the body to `insert-markdown` at the index of the H2 Summary's `endIndex` (the start of the empty space we just cleared):
 
 ```bash
-# Values pass
+tail -n +9 /tmp/flash_narrative_{period}.md \
+  | (cd ~/skills/gdrive && uv run gdrive-cli.py docs insert-markdown {DOC_ID} \
+       --tab {TAB_ID} --at-index {h2_summary_end_index} --font Roboto)
+```
+
+### 6d — Bullet nesting fix
+
+The markdown converter renders parent bullets ("- **Cash App gross profit**") as paragraphs and child bullets at the SAME nesting level rather than nested. After insert:
+
+1. Re-read the doc; find the range from "Cash App gross profit" paragraph start through "Proto gross profit" paragraph end.
+2. `deleteParagraphBullets` on that range.
+3. Insert a `\t` at the start of each sub-product paragraph (Commerce GMV, Cash App Actives, Cash App Inflows per Active, Global GPV, US GPV, INTL GPV) — process in **descending** index order so earlier inserts don't shift later ones.
+4. `createParagraphBullets` with `BULLET_DISC_CIRCLE_SQUARE` preset on the (expanded) range. Tab chars are consumed and converted into nesting level 1.
+
+### 6e — Reset narrative paragraphs to NORMAL_TEXT
+
+Known `insert-markdown` quirk: when inserting at an index immediately after an H2, every inserted paragraph inherits `namedStyleType=HEADING_2`. Apply `updateParagraphStyle` with `paragraphStyle.namedStyleType=NORMAL_TEXT` and `fields=namedStyleType` over the narrative range to fix this. Use `[narrative_start, narrative_end_after_inserts]` and be careful **not to overshoot into the H2 "Summary Table"** (a strict-less-than check on the H2's `startIndex`).
+
+If the H2 "Summary Table" gets accidentally demoted, restore it with `updateParagraphStyle({namedStyleType: HEADING_2})` on its range.
+
+### 6f — Apply Roboto on the narrative range
+
+```
+updateTextStyle({weightedFontFamily: {fontFamily: "Roboto"}}) over the narrative range, fields=weightedFontFamily
+```
+
+Don't apply tab-wide — the table cells are already Roboto from Step 6j's populator and tab-wide ranges can collide with section/table segment boundaries.
+
+### 6g — Apply bold to metric labels
+
+`insert-markdown` sometimes drops bold styling when paragraphs inherit HEADING_2 (and the NORMAL_TEXT reset doesn't re-apply bold). Restore by finding each metric label at the start of its paragraph and applying `bold: true`:
+
+```
+Block gross profit, Cash App gross profit, Commerce GMV, Cash App Actives,
+Cash App Inflows per Active, Square gross profit, Global GPV, US GPV, INTL GPV,
+TIDAL gross profit, Proto gross profit, Block variable profit, Adjusted Opex,
+Variable costs, Acquisition costs, Fixed costs, GAAP operating income,
+Adjusted Operating Income, {MonthName} Rule of 40  (or Q{N} Rule of 40)
+```
+
+### 6h — Apply red bold to "Corp to include context." phrases
+
+For each occurrence of `Corp to include context.` (V/A/F bucket bullets that triggered the corp-context flag): apply `updateTextStyle` with `foregroundColor={red:0.85,green:0.16,blue:0.16}` AND `bold:true` over the phrase range. Process in descending index order.
+
+### 6i — Populate the Summary Table
+
+```bash
+# 1. Read the right sheet range based on mode
+RANGE_MONTHLY="'MRP Charts & Tables'!L400:S427"
+RANGE_QUARTERLY="'MRP Charts & Tables'!T400:Y427"  # labels still come from L400:L427 separately
+
 cd ~/skills/gdrive && uv run gdrive-cli.py sheets read \
     15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0 \
-    --range "'MRP Charts & Tables'!L400:S427" > /tmp/flash_sheet.json
-cd ~/skills/gdrive && uv run gdrive-cli.py docs get \
-    1faTUvm5CYK-W4J7JeKezbi1aEvRbSJ95vkjMtzc_sJA --include-tabs > /tmp/flash_doc.json
-python3 ~/Desktop/Nick\'s\ Cursor/Corporate-Financial-Reporting/skills/monthly-flash/flash-data/helpers/populate_flash_table.py \
-    /tmp/flash_sheet.json /tmp/flash_doc.json t.6lmbmhs5p561 --pass values \
-    | (cd ~/skills/gdrive && uv run gdrive-cli.py docs batch-update \
-          1faTUvm5CYK-W4J7JeKezbi1aEvRbSJ95vkjMtzc_sJA)
+    --range "$RANGE" > /tmp/flash_sheet.json
 
-# Colors pass — re-read the doc first so indices are fresh
-cd ~/skills/gdrive && uv run gdrive-cli.py docs get \
-    1faTUvm5CYK-W4J7JeKezbi1aEvRbSJ95vkjMtzc_sJA --include-tabs > /tmp/flash_doc_v2.json
-python3 ~/Desktop/Nick\'s\ Cursor/Corporate-Financial-Reporting/skills/monthly-flash/flash-data/helpers/populate_flash_table.py \
-    /tmp/flash_sheet.json /tmp/flash_doc_v2.json t.6lmbmhs5p561 --pass colors \
-    | (cd ~/skills/gdrive && uv run gdrive-cli.py docs batch-update \
-          1faTUvm5CYK-W4J7JeKezbi1aEvRbSJ95vkjMtzc_sJA)
+# 2. Read doc, run populator (values pass)
+cd ~/skills/gdrive && uv run gdrive-cli.py docs get {DOC_ID} --include-tabs > /tmp/flash_doc.json
+python3 ~/Corporate-Financial-Reporting/skills/monthly-flash/flash-data/helpers/populate_flash_table.py \
+    /tmp/flash_sheet.json /tmp/flash_doc.json {TAB_ID} --pass values --mode {mode} \
+    | (cd ~/skills/gdrive && uv run gdrive-cli.py docs batch-update {DOC_ID})
+
+# 3. Re-read doc, run populator (colors pass — needs fresh indices)
+cd ~/skills/gdrive && uv run gdrive-cli.py docs get {DOC_ID} --include-tabs > /tmp/flash_doc_v2.json
+python3 ~/Corporate-Financial-Reporting/skills/monthly-flash/flash-data/helpers/populate_flash_table.py \
+    /tmp/flash_sheet.json /tmp/flash_doc_v2.json {TAB_ID} --pass colors --mode {mode} \
+    | (cd ~/skills/gdrive && uv run gdrive-cli.py docs batch-update {DOC_ID})
 ```
 
-What this does:
-- **Values pass:** clears every data cell in rows 2-27, inserts the formatted sheet value, applies Roboto 10pt + CENTER. Sheet col mapping: doc col 1 ← sheet col M (Actual), col 2 ← N (vs. OL $), col 3 ← O (vs. OL %), col 4 ← Q (vs. AP %), col 5 ← R (YoY %), col 6 ← S (Prior-mo YoY %). The `vs. AP $` column in the sheet (col P) is intentionally not used — the doc table only carries the % delta. Row 8 "Square INTL GPV (CC)" is left blank until CC sourcing lands in flash-data.
-- **Bold rows (label + all 6 data cells):** rows 10 (Block GP), 26 (Adjusted OI), 27 (Rule of 40). Controlled by the `BOLD_ROWS` constant in `populate_flash_table.py`. The values pass writes bold:true for these rows and bold:false for every other row, so the state is deterministic across runs (no stale bold survives a removal from the set).
-- **Variance precision rule (cols 2-4 only):** values with `|magnitude| ≤ 10` keep 1 decimal (`9.5%`, `$9.5M`, `+5.8 pts`); values with `|magnitude| > 10` become integer (`215%`, `$14M`, `+22 pts`). Half-up rounding. Applied in `populate_flash_table.py` (`reformat_variance`). YoY columns (5 + 6) are not reformatted — they pass through from the sheet as-is.
-- **Colors pass (cols 2-4 only):** green for positive, red for negative, black for everything else — `|Δ|` must exceed the column's threshold:
-  - col 2 (vs. Q2OL $) → $0.5M (inclusive: `≤ $0.5M` stays black)
-  - col 3 (vs. Q2OL %) → 1.0% (inclusive: `≤ 1.0%` stays black)
-  - col 4 (vs. AP %) → 1.0% (inclusive)
-  - cols 5 + 6 (YoY %, Mar YoY %) → always black, never colored
-  - `nm` / `--` / empty cells stay black.
-  Coloring is sign-based on the displayed value: `(X)` or `-X` → red; `+X` or `X` → green. OpEx-direction inversion (favorable-when-negative) is NOT applied — future enhancement if desired.
+What the populator does:
+- **Values pass** clears every data cell in rows 2–27, inserts the formatted sheet value, applies Roboto 10pt + CENTER. Variance cols (2, 3, 4) get the ±10 precision rule via `reformat_variance` before insert. Rows 10 (Block GP), 26 (Adjusted OI), 27 (Rule of 40) get `bold:true`; all other rows `bold:false` for deterministic state. Doc col 6 (Prior-mo YoY) is cleared in quarterly mode (no QTD source).
+- **Colors pass** sets foreground color on cols 2-6:
+  - col 2 (vs. OL $) → green/red if `|Δ| > $0.5M`, else black
+  - col 3 (vs. OL %) → green/red if `|Δ| > 1.0%`, else black
+  - col 4 (vs. AP %) → green/red if `|Δ| > 1.0%`, else black
+  - cols 5 + 6 (YoY %, Mar YoY %) → always black (per Flash disclaimer: "Variances in charts are not color coded for ... YoY comparisons")
+  - `nm`, `--`, empty → black
 
-The populator assumes the table shell exists. If the shell is destroyed (e.g., 5a clears it), Step 5f will fail. Steps 5a-5e should be revised when this command moves to a fully template-based publish flow.
-
-### 5g — Verify
+### 6j — Verify
 
 Read back the doc structure and confirm:
-- H1: "Block Topline Flash: [Month] [Year]"
+- H1: "Block Topline Flash: {PeriodLong}"
 - Italic disclaimer paragraphs (first with bold MRP reference)
-- H2: "[Month] Summary"
+- H2: "{PeriodLong} Summary"
 - Bullet nesting: Cash App / Square at level 0, sub-items at level 1
 - All metric labels bold
-- "Corp to include context" phrases in red wherever they appear
-- Summary Table populated with sheet values, % cols color-coded
+- "Corp to include context" phrases in red bold wherever they appear
+- Summary Table populated with sheet values, % cols color-coded, rows 10/26/27 bold
 
 ---
 
-## Step 6 — Validate
+## Step 7 — Validate
 
 Run `~/Corporate-Financial-Reporting/skills/monthly-flash/commands/monthly-validate.md`.
 
@@ -346,7 +427,7 @@ Execute its Steps 1–7. The validation re-reads the populated ranges (`L400:S42
 
 ---
 
-## Step 7 — Report back
+## Step 8 — Report back
 
 Tell Nick:
 - **File:** path to the saved .md

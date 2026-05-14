@@ -33,16 +33,34 @@ Build the data layer for the Monthly Flash. Pulls all metrics from BDM + Snowfla
 |---|---|
 | Output workbook | `15j9tou-7OmLxvk41cmkJkYTAQLXXLl08slX9p8RsVL0` |
 | Output tab | `MRP Charts & Tables` |
-| Flash table range | `L400:S427` (8 cols × 28 rows) |
-| Standardized P&L range | `L432:R468` (7 cols × 37 rows) |
+| Flash table range (monthly) | `L400:S427` (28 rows × 8 cols) — single-month values |
+| Flash table range (quarterly) | `T400:Y427` (28 rows × 6 cols, labels in col L) — QTD/full-quarter sums |
+| Standardized P&L range | `L432:R468` (37 rows × 7 cols) |
 | Helper script | `~/Corporate-Financial-Reporting/skills/monthly-flash/flash-data/helpers/flash_data.py` |
+
+**Mode selection:** auto-detect from period.
+- Quarter-end months (Mar, Jun, Sep, Dec) → **quarterly** mode → write to `T400:Y427`
+- Intra-quarter months → **monthly** mode → write to `L400:S427`
+
+Pass `--mode monthly|quarterly|auto` to override.
 
 ---
 
-## Step 1 — Determine the report month
+## Step 1 — Determine the report period and mode
 
-- If user passed a month arg (e.g., `Apr'26`), use it.
-- Otherwise default to the most recently closed month (one month back from today, since Flash runs after close).
+- If user passed a period arg (e.g., `Apr'26`, `Jun'26`), use it.
+- Otherwise default to the most recently closed month (one month back from today).
+- **Mode:** quarter-end (Mar/Jun/Sep/Dec) → quarterly. Otherwise → monthly.
+
+### Quarterly mode date math
+
+For a quarterly run on (e.g.) `Jun'26`:
+- The report quarter is `Q2 2026` covering Apr/May/Jun 2026.
+- Pull each metric for **all three months in the quarter** and sum to get the QTD value.
+- YoY prior = same quarter, prior year (Q2 2025 = Apr/May/Jun 2025 summed).
+- Q2OL for the quarter = sum of monthly Q2OL values across Apr/May/Jun.
+- AP for the quarter = sum of monthly AP values across Apr/May/Jun.
+- No prior-month YoY in quarterly mode (the T-Y view has no equivalent column).
 
 Compute the anchor dates:
 

@@ -47,19 +47,37 @@ import sys
 #   col 0 = label, col 1 = Actual, col 2 = vs. Q2OL $, col 3 = vs. Q2OL %,
 #   col 4 = vs. AP %, col 5 = YoY %, col 6 = Mar YoY %
 #
-# Sheet range MRP Charts & Tables!L400:S427 (28 rows × 8 cols)
-#   col 0 = label, col 1 = Actual, col 2 = vs. OL $, col 3 = vs. OL %,
-#   col 4 = vs. AP $, col 5 = vs. AP %, col 6 = YoY %, col 7 = Prior-mo YoY %
+# Sheet ranges:
+#   MONTHLY    — MRP Charts & Tables!L400:S427 (28 rows × 8 cols)
+#                cols 0..7 = label, Actual, OL$, OL%, AP$, AP%, YoY%, Prior-mo YoY%
+#   QUARTERLY  — MRP Charts & Tables!T400:Y427 (28 rows × 6 cols, NO label column —
+#                labels stay in col L which is shared)
+#                cols 0..5 = Actual, OL$, OL%, AP$, AP%, YoY%
 #
 # Mapping: doc col → sheet col (label col 0 not populated — already in shell).
-DOC_TO_SHEET_COL = {
+DOC_TO_SHEET_COL_MONTHLY = {
     1: 1,   # Actual
     2: 2,   # vs. Q2OL $   ← sheet vs. OL $
     3: 3,   # vs. Q2OL %   ← sheet vs. OL %
-    4: 5,   # vs. AP %     ← sheet col Q  (skip sheet col 4 = vs. AP $)
+    4: 5,   # vs. AP %     ← sheet col Q (skip sheet col 4 = vs. AP $)
     5: 6,   # YoY %
     6: 7,   # Mar YoY %    ← sheet Prior-mo YoY %
 }
+
+# Quarterly: T-Y range. No label col in the range itself (label stays in col L).
+# So sheet col 0 = Actual (T), 1 = OL$ (U), 2 = OL% (V), 3 = AP$ (W), 4 = AP% (X), 5 = YoY% (Y).
+# Doc col 6 (Prior-mo YoY) has no QTD equivalent — left empty (cleared in pass).
+DOC_TO_SHEET_COL_QUARTERLY = {
+    1: 0,   # Actual          ← T
+    2: 1,   # vs. Q-OL $       ← U
+    3: 2,   # vs. Q-OL %       ← V
+    4: 4,   # vs. AP %         ← X (skip W = AP $)
+    5: 5,   # YoY %            ← Y
+    # doc col 6: no source; values pass will clear stale text
+}
+
+# Legacy default (used when --mode isn't passed)
+DOC_TO_SHEET_COL = DOC_TO_SHEET_COL_MONTHLY
 
 # Row 0 = period header (col 1 has e.g. "Apr'26"); row 1 = column headers.
 # Data rows: doc row N maps 1:1 to sheet row N (range L400:S427 mirrors layout).
@@ -397,24 +415,30 @@ def build_values_requests(
     sheet: list[list[str]],
     table_rows: list[dict],
     tab_id: str,
+    mode: str = "monthly",
 ) -> tuple[list[dict], int, list[str]]:
     requests: list[dict] = []
     cells_written = 0
     warnings: list[str] = []
 
-    # Period header (row 0 col 1)
-    pr, pc = PERIOD_HEADER
+    is_quarterly = (mode == "quarterly")
+    col_map = DOC_TO_SHEET_COL_QUARTERLY if is_quarterly else DOC_TO_SHEET_COL_MONTHLY
+
+    # Period header (row 0 col 1). In monthly mode this is sheet (0, 1) = M400 ("Apr'26").
+    # In quarterly mode it's sheet (0, 0) since T-Y has no label col → T400 ("Q2 QTD").
+    pr, pc_doc = PERIOD_HEADER
+    pc_sheet = 0 if is_quarterly else 1
     if pr < len(table_rows):
         cells = table_rows[pr].get("tableCells", [])
-        if pc < len(cells):
-            value = get_sheet_value(sheet, pr, pc)
+        if pc_doc < len(cells):
+            value = get_sheet_value(sheet, pr, pc_sheet)
             if value:
-                reqs = build_cell_value_requests(cells[pc], value, tab_id)
+                reqs = build_cell_value_requests(cells[pc_doc], value, tab_id)
                 if reqs:
                     requests.extend(reqs)
                     cells_written += 1
         else:
-            warnings.append(f"Period header: row {pr} has no col {pc}")
+            warnings.append(f"Period header: row {pr} has no col {pc_doc}")
     else:
         warnings.append(f"Period header: doc has no row {pr}")
 
@@ -426,14 +450,13 @@ def build_values_requests(
         cells = table_rows[r].get("tableCells", [])
         is_bold = r in BOLD_ROWS
 
-        # Bold (or unbold) the label cell for this row so previously-set bold
-        # is cleared when we change BOLD_ROWS later.
         if cells:
             label_req = build_label_bold_request(cells[0], tab_id, bold=is_bold)
             if label_req:
                 requests.append(label_req)
 
-        for doc_col, sheet_col in DOC_TO_SHEET_COL.items():
+        # Populate the data columns per the active map.
+        for doc_col, sheet_col in col_map.items():
             if doc_col >= len(cells):
                 warnings.append(f"Row {r}: doc has no col {doc_col}")
                 continue
@@ -444,6 +467,13 @@ def build_values_requests(
             if reqs:
                 requests.extend(reqs)
                 cells_written += 1
+
+        # In quarterly mode, doc col 6 (Prior-mo YoY) has no QTD equivalent.
+        # Clear any stale text but don't insert anything.
+        if is_quarterly and 6 < len(cells):
+            reqs = build_cell_value_requests(cells[6], "", tab_id, bold=is_bold)
+            if reqs:
+                requests.extend(reqs)
 
     return requests, cells_written, warnings
 
@@ -562,6 +592,8 @@ def main() -> None:
     p.add_argument("doc_json")
     p.add_argument("tab_id")
     p.add_argument("--pass", dest="pass_", choices=["values", "colors"], default="values")
+    p.add_argument("--mode", choices=["monthly", "quarterly"], default="monthly",
+                   help="monthly: read M-S (8 sheet cols). quarterly: read T-Y (6 sheet cols, no Prior-mo YoY).")
     args = p.parse_args()
 
     try:
@@ -596,11 +628,11 @@ def main() -> None:
     if args.pass_ == "values":
         if len(sheet) < TOTAL_ROWS:
             print(f"Warning: sheet has {len(sheet)} rows, expected {TOTAL_ROWS}", file=sys.stderr)
-        requests, written, warnings = build_values_requests(sheet, table_rows, args.tab_id)
+        requests, written, warnings = build_values_requests(sheet, table_rows, args.tab_id, mode=args.mode)
         for w in warnings:
             print(f"Warning: {w}", file=sys.stderr)
         requests.sort(key=request_sort_key, reverse=True)
-        print(f"Values pass: {written} cells, {len(requests)} requests", file=sys.stderr)
+        print(f"Values pass ({args.mode}): {written} cells, {len(requests)} requests", file=sys.stderr)
     else:
         requests, counts, warnings = build_color_requests(table_rows, args.tab_id)
         for w in warnings:
